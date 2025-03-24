@@ -15,7 +15,7 @@ def create_file_upload():
     # Create file upload component
     file_upload = gr.File(
         label=FILE_UPLOAD_LABEL,
-        file_types=[".pdf", ".txt"],
+        file_types=[".pdf"],
         file_count="single",
         type="filepath",
         elem_id="document-upload"

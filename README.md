@@ -1,10 +1,10 @@
 # Teaching Syllabus Generator and Tutor
 
-A Gradio application that uses Gemini AI to generate teaching syllabuses from uploaded documents (PDF/TXT) and then provides an interactive teaching experience based on the generated syllabus.
+A Gradio application that uses Gemini AI to generate teaching syllabuses from uploaded documents (PDF) and then provides an interactive teaching experience based on the generated syllabus.
 
 ## Features
 
-- Upload PDF or TXT documents
+- Upload PDF
 - Direct multimodal document processing using Gemini's `Part.from_uri` capability
 - Generate structured teaching syllabuses using Gemini AI with JSON schema validation
 - Modify and refine syllabuses through natural language instructions
@@ -37,10 +37,7 @@ A Gradio application that uses Gemini AI to generate teaching syllabuses from up
 - `S3_BUCKET_NAME`: S3 bucket name for document uploads
 - `S3_ACCESS_HOST`: S3 access host for public URLs
 - `AWS_S3_ENDPOINT`: S3 endpoint URL
-- `VERTEX_PROJECT_ID`: Google Cloud project ID (default: funplus-ai)
-- `VERTEX_LOCATION`: Google Cloud location (default: asia-east2)
-- `GEMINI_MODEL`: Gemini model for syllabus generation (default: gemini-1.5-pro)
-- `GEMINI_CHAT_MODEL`: Gemini model for interactive teaching (default: gemini-2.0-flash)
+- `GEMINI_CHAT_MODEL`: Gemini model for interactive teaching 
 
 ## Usage
 
@@ -85,14 +82,3 @@ The generated syllabus follows this JSON structure:
   ]
 }
 ```
-
-## Technical Implementation
-
-The application uses:
-
-- **Gemini 1.5 Pro** for document analysis and syllabus generation
-- **Gemini 2.0 Flash** for interactive teaching sessions
-- **Multimodal document processing** with direct PDF/document analysis
-- **Schema-based structured output** to ensure consistent JSON formatting
-- **S3 storage** for document management
-- **Gradio** for the interactive web interface 

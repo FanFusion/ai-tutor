@@ -215,7 +215,7 @@ CHAT_INTERFACE_DESCRIPTION = """
         This chatbot can generate and modify teaching syllabuses based on uploaded documents.
         
         **Usage Instructions:**
-        1. Upload a document (PDF/TXT) using the file upload component
+        1. Upload a document (PDF) using the file upload component
         2. Ask the chatbot to generate a syllabus from the document
         3. Modify the syllabus by providing specific instructions
         
@@ -238,7 +238,6 @@ FILE_UPLOAD_DESCRIPTION = """
         <summary>Supported Document Formats</summary>
         
         - PDF documents (recommended for best results)
-        - Text files (.txt)
     </details>
     """
 

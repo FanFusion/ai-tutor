@@ -210,7 +210,6 @@ class GeminiService:
         # Map file extensions to MIME types
         mime_types = {
             '.pdf': 'application/pdf',
-            '.txt': 'text/plain'
         }
         
         mime_type = mime_types.get(file_extension, 'application/pdf')

@@ -363,7 +363,6 @@ the syllabus
         # Convert current stage info to string if it exists
         stage_info_str = json.dumps(current_stage_info) if current_stage_info else "null"
         
-        # Create prompt exactly matching the format in 规划.txt
         prompt = f"""
         Input_type: {input_type}
         Input: {input_content}
