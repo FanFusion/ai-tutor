@@ -18,7 +18,7 @@ def create_teaching_interface(tutor_bot_service):
     
     # Create chatbot component for the teaching interaction
     chatbot = gr.Chatbot(
-        height=500,
+        height=400,
         elem_id="teaching-chatbot",
         show_label=False,
         avatar_images=("./app/assets/user.png", "./app/assets/bot.png")

@@ -16,7 +16,7 @@ def create_chat_interface(syllabus_generator):
     logger.info("Creating chat interface")
     
     # Create chatbot component
-    chatbot = gr.Chatbot(height=500)
+    chatbot = gr.Chatbot(height=400)
     logger.debug("Initialized chatbot component")
     
     # Add descriptive message

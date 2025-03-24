@@ -1,6 +1,6 @@
 import os
 import json
-from vertexai.generative_models import GenerativeModel, GenerationConfig, Part
+from vertexai.generative_models import GenerativeModel, GenerationConfig, Part, ChatSession
 from app.utils.gr_logger import setup_logger
 
 class GeminiService:
@@ -14,6 +14,7 @@ class GeminiService:
         model_name = os.environ.get("GEMINI_MODEL")
         self.logger.debug(f"Using Gemini model: {model_name}")
         self.model = GenerativeModel(model_name)
+        self.chat_session = None
         
         # Define syllabus JSON schema for structured output
         self.syllabus_schema = {
@@ -76,6 +77,9 @@ class GeminiService:
             mime_type=document_mime_type
         )
         
+        # Initialize a new chat session
+        self.chat_session = self.model.start_chat()
+        
         # Prompt for generating a structured syllabus
         prompt_text = """
         You are an expert educational content creator. Your task is to analyze the provided document.
@@ -127,13 +131,12 @@ class GeminiService:
         Return a structured JSON object following the required format.
         """
         
-        # Combine document and prompt as parts for the model
-        contents = [document_part, prompt_text]
-        
-        # First try using structured output with schema
         try:
             self.logger.info("Attempting to generate structured syllabus with schema")
-            response = self.model.generate_content(
+            
+            # Send document part and prompt together in a single message
+            contents = [document_part, prompt_text]
+            response = self.chat_session.send_message(
                 contents,
                 generation_config=GenerationConfig(
                     max_output_tokens=8192,
@@ -165,90 +168,29 @@ class GeminiService:
         self.logger.info("Updating syllabus based on user instructions")
         self.logger.debug(f"User message: {user_message}")
         
-        # Convert current syllabus to string for the prompt
-        current_syllabus_str = json.dumps(current_syllabus, indent=2)
-        
-        # Prompt for updating the syllabus
-        prompt = f"""
-        You are an expert educational content creator. I have a teaching syllabus in JSON format:
-        
-        {current_syllabus_str}
-        
-        I would like to update this syllabus according to these instructions:
-        
+        # Create prompt with just the modification instructions
+        update_prompt = f"""
+        Please update the syllabus according to these instructions,follow the rules above:
         {user_message}
-        
-        Please modify the syllabus accordingly and return the updated syllabus.
-        
-        Make sure to maintain the exact same JSON structure with these fields:
-        - syllabus_name
-        - target_audience
-        - syllabus (an array of stages)
-          - Each stage must include: stage_id, stage_description, judge_media_allowed, target, teaching_knowledge, judge_question, judge_answer
-        
-        For any content that should include multimedia elements, use appropriate tags:
-        - For images: <image>detailed description of what the image should show</image>
-        - For videos: <video>detailed description of what the video should contain</video>
         """
         
-        # First try using structured output with schema
+        # Try using structured output with schema
         try:
             self.logger.info("Attempting to update syllabus with schema")
-            response = self.model.generate_content(
-                prompt,
+            response = self.chat_session.send_message(
+                update_prompt,
                 generation_config=GenerationConfig(
-                    max_output_tokens=4096,
+                    max_output_tokens=8192,
                     temperature=0.2,
                     response_mime_type="application/json",
                     response_schema=self.syllabus_schema
                 )
             )
-            
             # Parse the structured JSON response
             result = json.loads(response.text)
             self.logger.info("Successfully updated syllabus with schema")
             return result
-            
-        except Exception as schema_error:
-            self.logger.error(f"Error updating structured syllabus: {str(schema_error)}", exc_info=True)
-            
-            # Fallback to text generation without schema
-            try:
-                self.logger.info("Falling back to text generation without schema")
-                response = self.model.generate_content(
-                    prompt,
-                    generation_config=GenerationConfig(
-                        max_output_tokens=4096,
-                        temperature=0.2
-                    )
-                )
-                
-                response_text = response.text
-                
-                # Try to parse response as JSON directly
-                try:
-                    result = json.loads(response_text)
-                    self.logger.info("Successfully parsed response as JSON")
-                    return result
-                except json.JSONDecodeError:
-                    self.logger.warning("Failed to parse response as JSON, attempting to extract JSON from text")
-                    # If direct parsing fails, try to extract JSON from text
-                    json_start = response_text.find('{')
-                    json_end = response_text.rfind('}') + 1
-                    
-                    if json_start != -1 and json_end != -1:
-                        json_content = response_text[json_start:json_end]
-                        try:
-                            result = json.loads(json_content)
-                            self.logger.info("Successfully extracted and parsed JSON content")
-                            return result
-                        except json.JSONDecodeError:
-                            self.logger.error("Could not parse extracted content as JSON")
-                            return {"error": "Could not parse extracted content as JSON"}
-                    else:
-                        self.logger.error("Could not find JSON content in response")
-                        return {"error": "Could not find JSON content in response"}
-            except Exception as fallback_error:
+        except Exception as fallback_error:
                 self.logger.error(f"Failed to update syllabus: {str(fallback_error)}", exc_info=True)
                 return {"error": f"Failed to update syllabus: {str(fallback_error)}"}
                 
