@@ -293,15 +293,16 @@ class TutorBotService:
         2. is_pass should only be true when response_type is "judge" and the student's answer meets the criteria in judge_rule
         
         3. For multimedia content in response_content, use these tags:
-           - <image>detailed description of what the image should show</image>
-           - <video>detailed description of what the video should contain</video>
+           - [image]detailed description of what the image should show[/image]
+           - [video]detailed description of what the video should contain[/video]
            - <interactive>detailed description of what the interactive element should contain</interactive>
         
         4. You will receive input in this format:
            Input_type: admin/user
            Input: (content)
            Current_stage_info: (JSON of current stage)
-        
+           In some case,user will provide interaction content, The interaction content will be warped in [interaction] tags,with the description of what the interaction should contain,
+           you should consider the content in tags as the interaction content, to judge the student's answer is correct or not
         5. Admin commands have special meanings:
            - "start teaching": Begin the teaching session with a greeting,the greeting content should relate to the total syllabus.
            - "end teaching": End the teaching session with a conclusion
@@ -322,6 +323,15 @@ class TutorBotService:
         11. When judging answers, strictly follow the judge_rule defined in the syllabus for that stage
         
         12. ALWAYS return a valid JSON object with the exact structure as shown above.
+        
+        13. You MUST highlight the question part in the response_content using **content**
+        for example:
+        response_content:
+        China is a country in East Asia,with its capital is Beijing.
+        **Question:what is the capital of China**
+        
+        14. You MUST limit the conversation between the user and you  within the scope of
+the syllabus
         """
         
         return system_prompt

@@ -129,8 +129,8 @@ SYLLABUS_FORMAT="""
                           - Evaluation questions and answers
                         
                         Multimedia content can be specified using tags:
-                        - `<image>description</image>`
-                        - `<video>description</video>`
+                        - `[image]description[/image]`
+                        - `[video]description[/video]`
                         """
                         
                         
@@ -226,8 +226,8 @@ CHAT_INTERFACE_DESCRIPTION = """
         - Evaluation questions and answers
         
         **Multimedia content can be specified using tags:**
-        - `<image>description</image>`
-        - `<video>description</video>`
+        - `[image]description[/image]`
+        - `[video]description[/video]`
     </details>
     """
 

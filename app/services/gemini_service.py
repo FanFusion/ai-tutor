@@ -112,18 +112,19 @@ class GeminiService:
             "judge_rule":string,the rule to judge the answer if the answer is correct,the user will pass this stage
         }
 
-        IMPORTANT!: YOU MUST FOLLOW THE FOLLOWING RULES ABOUT THE MULTIMEDIA ELEMENTS:
+        VERY IMPORTANT!: YOU MUST FOLLOW THE FOLLOWING RULES ABOUT THE MULTIMEDIA ELEMENTS:
         For any content that should include multimedia elements, use appropriate tags:
-        - For images: <image>detailed description of what the image should show</image>
-        - For videos: <video>detailed description of what the video should contain</video>
+        - For images: [image]detailed description of what the image should show[/image]
+        - For videos: [video]detailed description of what the video should contain[/video]
         - For interactive elements: <interactive>detailed description of what the interactive element should contain</interactive>
         
-        The target,teaching_knowledge,judge_question,judge_rule may provide multimedia elements according to the raw data that provided by the user
-        You should provide multimedia tags when you think it is necessary
+        VERY IMPORTANT!:The target,teaching_knowledge,judge_question,judge_rule MAY provide multimedia elements according to the raw data
+        
+        You MUST provide multimedia tags when you think it is necessary
         for example:
         target:help the student to understand the how gravity works
-        teaching_knowledge:<video>a picture of a person jumping and falling</video> <image>a picture of apple falling towards Newton's head</image>
-        judge_question: which image is effective to explain the gravity? <image> water flows from high to low</image> <image>a car is driving on the road quickly</image>
+        teaching_knowledge:[video]a picture of a person jumping and falling[/video] [image]a picture of apple falling towards Newton's head[/image]
+        judge_question: which image is effective to explain the gravity? [image] water flows from high to low[/image] [image]a car is driving on the road quickly[/image]
         judge_rule: the correct answer is the image that shows the water flows from high to low
     
         

@@ -23,13 +23,28 @@ def create_teaching_interface(tutor_bot_service):
         show_label=False,
         avatar_images=("./app/assets/user.png", "./app/assets/bot.png")
     )
+        # Create multimedia input buttons
+    with gr.Row():
+        gr.Markdown(MULTIMEDIA_HEADING)
+        image_btn = gr.Button(IMAGE_BTN_TEXT)
+        video_btn = gr.Button(VIDEO_BTN_TEXT)
     
-    # Create message input
-    msg = gr.Textbox(
-        placeholder=TEACHING_CHAT_PLACEHOLDER,
-        container=False,
-        scale=7
+
+    # Create interaction input
+    interaction = gr.Textbox(
+        label="Interaction Content",
+        placeholder="Type interaction content here...",
+        container=True
     )
+    
+    # Create message input and send button in a row
+    with gr.Row():
+        msg = gr.Textbox(
+            placeholder=TEACHING_CHAT_PLACEHOLDER,
+            container=False,
+            scale=7
+        )
+        send_btn = gr.Button(SEND_BTN_TEXT, variant="primary", scale=1)
     
     # Create stage indicators
     current_stage = gr.Markdown(TEACHING_STAGE_NOT_STARTED)
@@ -41,12 +56,6 @@ def create_teaching_interface(tutor_bot_service):
         next_stage_btn = gr.Button(NEXT_STAGE_TEXT)
         prev_stage_btn = gr.Button(PREV_STAGE_TEXT)
         end_btn = gr.Button(END_TEACHING_TEXT, variant="stop")
-    
-    # Create multimedia input buttons
-    with gr.Row():
-        gr.Markdown(MULTIMEDIA_HEADING)
-        image_btn = gr.Button(IMAGE_BTN_TEXT)
-        video_btn = gr.Button(VIDEO_BTN_TEXT)
     
     # Add example questions
     example_questions = TEACHING_EXAMPLE_QUESTIONS
@@ -137,27 +146,26 @@ def create_teaching_interface(tutor_bot_service):
         else:
             return TEACHING_STAGE_NOT_STARTED, TEACHING_PROGRESS_NOT_STARTED
     
-    # Helper functions for multimedia input
-    def add_image_tag(message):
-        logger.debug("Adding image tag to message")
-        return message + " <image></image>"
-    
-    def add_video_tag(message):
-        logger.debug("Adding video tag to message")
-        return message + " <video></video>"
+    # Helper function to add interaction content to message
+    def add_interaction_content(interaction_text, message):
+        logger.debug("Adding interaction content to message")
+        interaction_formatted = f" [interaction]{interaction_text}[/interaction]"
+        return message + interaction_formatted if message else interaction_formatted
     
     # Connect components
     msg.submit(user_message_submit, [msg, chatbot], [msg, chatbot])
+    
+    # Connect send button to submit function
+    send_btn.click(user_message_submit, [msg, chatbot], [msg, chatbot])
+    
+    # Connect interaction input to message
+    interaction.change(add_interaction_content, [interaction, msg], [msg])
     
     # Connect admin buttons
     start_btn.click(start_teaching, [chatbot], [chatbot])
     next_stage_btn.click(next_stage, [chatbot], [chatbot])
     prev_stage_btn.click(prev_stage, [chatbot], [chatbot])
     end_btn.click(end_teaching, [chatbot], [chatbot])
-    
-    # Connect multimedia buttons to message input
-    image_btn.click(add_image_tag, [msg], [msg])
-    video_btn.click(add_video_tag, [msg], [msg])
     
     # Connect stage indicators update
     for btn in [start_btn, next_stage_btn, prev_stage_btn]:
