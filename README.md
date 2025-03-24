@@ -2,10 +2,10 @@
 
 A Gradio application that uses Gemini AI to generate teaching syllabuses from uploaded documents (PDF) and then provides an interactive teaching experience based on the generated syllabus.
 
-## Features
+## Tech Details
 
 - Upload PDF
-- Direct multimodal document processing using Gemini's `Part.from_uri` capability
+- Direct multimodal document processing using Gemini
 - Generate structured teaching syllabuses using Gemini AI with JSON schema validation
 - Modify and refine syllabuses through natural language instructions
 - Interactive teaching sessions based on the generated syllabus
@@ -45,7 +45,7 @@ A Gradio application that uses Gemini AI to generate teaching syllabuses from up
 
 1. Open the application in your browser
 2. Go to the "Generate Syllabus" tab
-3. Upload a document (PDF or TXT)
+3. Upload a document (PDF 
 4. Send a message to generate a syllabus (e.g., "Generate a syllabus from this document")
 5. Refine the syllabus with additional instructions if needed
 
