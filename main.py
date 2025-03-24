@@ -110,8 +110,7 @@ def create_app():
                 )
                 
                 # Teaching interface container - initially hidden
-                with gr.Group(visible=False, elem_id="teaching_interface_container") as teaching_container:
-                    with gr.Row():
+                with gr.Row():
                         with gr.Column(scale=1):
                             gr.Markdown(TEACHING_TUTOR_DESCRIPTION)
                             
@@ -120,13 +119,14 @@ def create_app():
                             progress_display = gr.Markdown(TEACHING_PROGRESS_NOT_STARTED)
                             
                         with gr.Column(scale=2):
+
                             # Create teaching interface
-                            logger.debug("Setting up teaching interface")
+                            logger.info("Setting up teaching interface")
                             teaching_chat, current_stage, stage_progress = create_teaching_interface(tutor_bot_service)
                             
-                    # Ensure stage indicators update properly
-                    current_stage.change(lambda x: x, current_stage, current_stage_display)
-                    stage_progress.change(lambda x: x, stage_progress, progress_display)
+                    # # Ensure stage indicators update properly
+                    # current_stage.change(lambda x: x, current_stage, current_stage_display)
+                    # stage_progress.change(lambda x: x, stage_progress, progress_display)
         
         # Modified function to update button interactive state and manage syllabi
         def check_for_syllabus_and_update_button(chat_history):
@@ -296,15 +296,6 @@ def create_app():
         
         # Function to handle the start teaching button click
         def handle_start_teaching(syllabus_ready, syllabus_data):
-            """Handle the start teaching button click
-            
-            Args:
-                syllabus_ready (bool or State): Whether a valid syllabus has been generated
-                syllabus_data (dict or State): The syllabus data if already parsed
-                
-            Returns:
-                int: Tab index to select (1 for teaching tab)
-            """
             # Extract values from State objects if needed 
             syllabus_ready_val = syllabus_ready.value if hasattr(syllabus_ready, "value") else syllabus_ready
             syllabus_data_val = syllabus_data.value if hasattr(syllabus_data, "value") else syllabus_data
@@ -316,12 +307,11 @@ def create_app():
                 try:
                     logger.info("Setting syllabus for tutor bot from state")
                     tutor_bot_service.set_syllabus(syllabus_data_val)
-                    # Return tab index
-                    return 1  # Select the second tab (Teaching Session)
+                    return gr.Tabs(selected='teaching-tab')
                 except Exception as e:
                     logger.error(f"Error setting syllabus from state: {str(e)}", exc_info=True)
             
-            return 0  # Stay on first tab if there's an error
+            return gr.Tabs(selected='syllabus-tab')
         
         # Function to switch to teaching tab and set syllabus
         def switch_to_teaching(syllabus_ready, syllabus_data):
@@ -354,12 +344,11 @@ def create_app():
                             audience,
                             num_stages
                         )
-                        
+                        logger.info(f"Teaching success message: {teaching_success_msg}")
                         # Show teaching interface
                         return (
                             gr.update(visible=False),
                             gr.update(visible=True, value=teaching_success_msg),
-                            gr.update(visible=True)
                         )
                     except Exception as e:
                         logger.error(f"Error updating teaching interface: {str(e)}", exc_info=True)
@@ -369,7 +358,6 @@ def create_app():
                 # Show error
                 return (
                     gr.update(visible=True),
-                    gr.update(visible=False),
                     gr.update(visible=False)
                 )
                 
@@ -390,7 +378,7 @@ def create_app():
         ).then(
             fn=switch_to_teaching,
             inputs=[syllabus_ready, syllabus_data],
-            outputs=[placeholder_message, teaching_status, teaching_container]
+            outputs=[placeholder_message, teaching_status]
         )
     
     logger.info("Application initialization complete")
