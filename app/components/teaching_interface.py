@@ -43,6 +43,7 @@ def create_teaching_interface(tutor_bot_service):
         next_stage_btn = gr.Button(NEXT_STAGE_TEXT)
         prev_stage_btn = gr.Button(PREV_STAGE_TEXT)
         end_btn = gr.Button(END_TEACHING_TEXT, variant="stop")
+        clear_btn = gr.Button(CLEAR_BTN_TEXT, variant="secondary")
     
     # Create multimedia input buttons
     with gr.Row():
@@ -117,6 +118,26 @@ def create_teaching_interface(tutor_bot_service):
         update_stage_indicators()
         return updated_chat_history
     
+    def clear_chat():
+        """Clear the chat history and reset teaching state"""
+        logger.info("Clearing chat history and resetting teaching state")
+        
+        # Reset the tutor bot service state
+        if hasattr(tutor_bot_service, 'reset_state'):
+            tutor_bot_service.reset_state()
+        else:
+            # Reset essential attributes if reset_state method doesn't exist
+            tutor_bot_service.is_teaching_started = False
+            tutor_bot_service.current_stage_index = 0
+            if hasattr(tutor_bot_service, 'chat_history'):
+                tutor_bot_service.chat_history = []
+        
+        # Update stage indicators
+        update_stage_indicators()
+        
+        # Return empty chat history
+        return []
+    
     def update_stage_indicators():
         """Update the stage indicators"""
         if tutor_bot_service.syllabus_info and tutor_bot_service.is_teaching_started:
@@ -153,6 +174,7 @@ def create_teaching_interface(tutor_bot_service):
     next_stage_btn.click(next_stage, [chatbot], [chatbot])
     prev_stage_btn.click(prev_stage, [chatbot], [chatbot])
     end_btn.click(end_teaching, [chatbot], [chatbot])
+    clear_btn.click(clear_chat, None, [chatbot])
     
     # Connect multimedia buttons to message input
     interaction_btn.click(add_interaction_tag, [msg], [msg])
@@ -161,6 +183,8 @@ def create_teaching_interface(tutor_bot_service):
     # for btn in [start_btn, next_stage_btn, prev_stage_btn,send_btn]:
     #     btn.click(update_stage_indicators, None, [current_stage, stage_progress])
     chatbot.change(update_stage_indicators, None, [current_stage, stage_progress])
+    clear_btn.click(update_stage_indicators, None, [current_stage, stage_progress])
+    
     # Add examples
     gr.Examples(
         examples=example_questions,

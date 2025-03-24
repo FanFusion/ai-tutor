@@ -39,6 +39,14 @@ class TutorBotService:
         
         self.logger.debug("TutorBotService initialized successfully")
     
+    def reset_state(self):
+        """Reset the tutor bot state, keeping the syllabus but clearing teaching progress"""
+        self.logger.info("Resetting tutor bot state")
+        self.current_stage_index = 0
+        self.is_teaching_started = False
+        self.chat_session = None
+        self.logger.debug("Tutor bot state reset successfully")
+    
     def set_syllabus(self, syllabus_info):
         """Set the syllabus information for the tutor bot
         
