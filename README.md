@@ -1,6 +1,6 @@
 # Teaching Syllabus Generator and Tutor
 
-A Gradio application that uses Gemini AI to generate teaching syllabuses from uploaded documents (PDF) and then provides an interactive teaching experience based on the generated syllabus.
+A MVP Gradio application that uses Gemini AI to generate teaching syllabuses from uploaded documents (PDF) and then provides an interactive teaching experience based on the generated syllabus.
 
 ## Tech Details
 
@@ -12,6 +12,13 @@ A Gradio application that uses Gemini AI to generate teaching syllabuses from up
 - Support for multimedia content tags in both the syllabus and teaching responses
 - Stage-by-stage progression through the teaching content
 - Automatic evaluation of user answers with progress tracking
+- A state machine to control flow
+- Use tags to present multimodal input/output, (can use functional call to implement later)
+
+
+## Current issues
+* Not support Multiuser ,limite quota
+* Some UX bugs
 
 ## Setup
 
