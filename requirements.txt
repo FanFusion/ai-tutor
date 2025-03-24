@@ -1,0 +1,6 @@
+gradio
+boto3
+google-cloud-aiplatform
+google-generativeai
+vertexai
+python-dotenv
