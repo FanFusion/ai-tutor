@@ -87,12 +87,16 @@ class SyllabusGenerator:
         if re.search(r'generate.*syllabus|create.*syllabus', message.lower()):
             self.logger.info("Generating syllabus from document")
             try:
-                self.current_syllabus = self.gemini_service.generate_syllabus_from_document(self.document_url)
+                # Get syllabus from Gemini service
+                result = self.gemini_service.generate_syllabus_from_document(self.document_url)
                 
                 # Check if there was an error in generation
-                if "error" in self.current_syllabus:
-                    self.logger.error(f"Error generating syllabus: {self.current_syllabus['error']}")
-                    return f"Error: {self.current_syllabus['error']}"
+                if "error" in result:
+                    self.logger.error(f"Error generating syllabus: {result['error']}")
+                    return f"Error: {result['error']}"
+                
+                # Save valid syllabus to current_syllabus
+                self.current_syllabus = result
                 
                 # Format syllabus for display
                 formatted_syllabus = json.dumps(self.current_syllabus, indent=2, ensure_ascii=False)
@@ -106,20 +110,20 @@ class SyllabusGenerator:
         elif self.current_syllabus:
             self.logger.info("Updating existing syllabus")
             try:
-                updated_syllabus = self.gemini_service.update_syllabus(self.current_syllabus, message)
+                # Get updated syllabus from Gemini service
+                result = self.gemini_service.update_syllabus(self.current_syllabus, message)
                 
                 # Check if there was an error in update
-                if "error" in updated_syllabus:
-                    self.logger.error(f"Error updating syllabus: {updated_syllabus['error']}")
-                    return f"Error: {updated_syllabus['error']}"
+                if "error" in result:
+                    self.logger.error(f"Error updating syllabus: {result['error']}")
+                    return f"Error: {result['error']}"
                 
-                self.current_syllabus = updated_syllabus
+                # Save valid updated syllabus
+                self.current_syllabus = result
                 
                 # Format syllabus for display
                 formatted_syllabus = json.dumps(self.current_syllabus, indent=2, ensure_ascii=False)
                 
-                # Check syllabus structure
-
                 self.logger.info("Syllabus updated successfully")
                 return f"Updated teaching syllabus:\n```json\n{formatted_syllabus}\n```"
             except Exception as e:

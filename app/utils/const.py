@@ -56,6 +56,49 @@ MAIN_CSS="""
             border-bottom: 1px solid #e0e0e0;
             margin-bottom: 0.5em;
         }
+        /* Syllabus Accordion styling */
+        .gradio-accordion {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 1em;
+            background-color: #f9f9f9;
+        }
+        .gradio-accordion[open] .label-wrap {
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 0.5em;
+        }
+        .gradio-accordion .grammd {
+            padding: 0.5em;
+        }
+        /* Syllabus details styling */
+        .syllabus-details {
+            padding: 10px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        .syllabus-details h2 {
+            color: #2c3e50;
+            margin-top: 0;
+            border-bottom: 1px solid #eaecef;
+            padding-bottom: 10px;
+        }
+        .syllabus-details h3 {
+            color: #3c4043;
+            margin: 15px 0 10px 0;
+        }
+        .syllabus-metadata {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 3px solid #75b798;
+        }
+        .syllabus-stages {
+            margin-left: 20px;
+        }
+        .syllabus-stages li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
     """
 
 SYLLABUS_DESCRIPTION="""
@@ -202,10 +245,10 @@ FILE_UPLOAD_DESCRIPTION = """
 # Success and error message templates
 SUCCESS_SYLLABUS_TEMPLATE = """
 <div class="success-status">
-<strong>✅ Success!</strong> Syllabus "{}" selected.
+<strong>✅ Success!</strong> Syllabus "{}" generated.
 <br>Target audience: {}
 <br>Number of stages: {}
-<br><br>You can now click 'Start Teaching Session' to begin teaching.
+<br><br>You can now click 'Start Teaching Session' to begin teaching, or expand 'Current Syllabus' above to see details.
 </div>
 """
 

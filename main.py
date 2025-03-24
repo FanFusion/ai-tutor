@@ -59,15 +59,9 @@ def create_app():
                             elem_id="syllabus-status"
                         )
                         
-                        # Add syllabus selector dropdown (initially empty)
-                        with gr.Row():
-                            syllabus_dropdown = gr.Dropdown(
-                                label="Select Syllabus", 
-                                choices=[], 
-                                interactive=True,
-                                elem_id="syllabus-dropdown",
-                                visible=False
-                            )
+                        # Add collapsible section to display current syllabus details
+                        with gr.Accordion("Current Syllabus", open=False, visible=False) as syllabus_details:
+                            syllabus_info = gr.JSON(value=None, label="Syllabus Data")
                         
                         # Add start teaching button with enhanced styling
                         with gr.Row():
@@ -86,8 +80,27 @@ def create_app():
                 
                 # Connect file upload to chat component
                 logger.debug("Connecting file upload to chat interface")
+                
+                # Create file upload handler
+                def create_file_upload_handler(sg):
+                    """Create a handler for file uploads
+                    
+                    Args:
+                        sg: SyllabusGenerator instance
+                        
+                    Returns:
+                        function: A function that handles file uploads
+                    """
+                    def handle_file_upload(file):
+                        return sg.handle_file_upload(file)
+                    
+                    return handle_file_upload
+                
+                # Create the handler with the syllabus generator
+                file_upload_handler = create_file_upload_handler(syllabus_generator)
+                
                 file_upload.change(
-                    fn=syllabus_generator.handle_file_upload,
+                    fn=file_upload_handler,
                     inputs=[file_upload],
                     outputs=[syllabus_chat]
                 )
@@ -104,163 +117,116 @@ def create_app():
                             logger.info("Setting up teaching interface")
                             teaching_chat, current_stage, stage_progress = create_teaching_interface(tutor_bot_service)
         
-        # Modified function to update button interactive state and manage syllabi
-        def check_for_syllabus_and_update_button(chat_history):
-            """Check if chat history contains a valid syllabus and update button state
+        # Modified function to get the syllabus directly from the service
+        def create_syllabus_getter(sg):
+            """Create a function that gets syllabus from the provided generator
             
             Args:
-                chat_history (list): Chat history from syllabus generator
+                sg: SyllabusGenerator instance
                 
             Returns:
-                tuple: (syllabus_ready, syllabus_data, status_message, all_syllabi_updated, dropdown_update)
+                function: A function that gets syllabus when called
             """
-            syllabus_json = None
-            logger.info("Checking for syllabus in chat history")
-            
-            for _, bot_message in reversed(chat_history):
-                # Look for JSON code block in bot messages
-                if "```json" in bot_message:
-                    # Extract JSON from code block
-                    json_start = bot_message.find("```json\n") + 8
-                    json_end = bot_message.find("```", json_start)
-                    json_content = bot_message[json_start:json_end].strip()
+            def get_syllabus_from_generator(chat_history):
+                """Get the syllabus directly from the syllabus generator service
+                
+                Args:
+                    chat_history: Chat history (not used, just for triggering)
                     
-                    try:
-                        syllabus_json = json.loads(json_content)
-                        logger.info(f"Found potential syllabus JSON in chat history: {json.dumps(syllabus_json)[:200]}...")
-                        
-                        # Basic validation of the syllabus structure
-                        if ("syllabus_name" in syllabus_json and 
-                            "syllabus" in syllabus_json and 
-                            isinstance(syllabus_json["syllabus"], list) and 
-                            len(syllabus_json["syllabus"]) > 0):
-                            
-                            logger.info(f"Valid syllabus found in chat history with {len(syllabus_json['syllabus'])} stages")
-                            syllabus_name = syllabus_json.get("syllabus_name", "Unknown")
-                            audience = syllabus_json.get("target_audience", "")
-                            
-                            success_message = SUCCESS_SYLLABUS_TEMPLATE.format(
-                                syllabus_name,
-                                audience,
-                                len(syllabus_json['syllabus'])
-                            )
-                            
-                            # Update button state without directly manipulating the component
-                            # We'll return interactive=True and let Gradio update it
-                            
-                            # Update all_syllabi state
-                            def update_syllabi_list(all_syllabi_list, new_syllabus):
-                                # Create a copy of the all_syllabi list
-                                updated_list = list(all_syllabi_list.value) if all_syllabi_list is not None and hasattr(all_syllabi_list, "value") else []
-                                
-                                # Check if this syllabus already exists (by name)
-                                exists = False
-                                for i, existing_syllabus in enumerate(updated_list):
-                                    if existing_syllabus.get("syllabus_name") == new_syllabus.get("syllabus_name"):
-                                        # Replace with newer version
-                                        updated_list[i] = new_syllabus
-                                        exists = True
-                                        break
-                                
-                                # Add if it doesn't exist
-                                if not exists:
-                                    updated_list.append(new_syllabus)
-                                
-                                return updated_list
-                            
-                            # Get updated syllabi list
-                            all_syllabi_updated = update_syllabi_list(all_syllabi, syllabus_json)
-                            
-                            # Create dropdown choices
-                            dropdown_choices = [s.get("syllabus_name", "Unknown") for s in all_syllabi_updated]
-                            
-                            # Update dropdown
-                            dropdown_update = gr.update(
-                                choices=dropdown_choices,
-                                value=syllabus_name,  # Set current syllabus as selected
-                                visible=True
-                            )
-                            
-                            return (
-                                True,                  # syllabus_ready
-                                syllabus_json,         # syllabus_data
-                                success_message,       # status_message
-                                all_syllabi_updated,   # all_syllabi_updated
-                                dropdown_update        # dropdown_update
-                            )
-                        else:
-                            logger.warning(f"Found JSON but it's not a valid syllabus. Keys: {list(syllabus_json.keys())}")
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Failed to parse syllabus JSON from chat history: {str(e)}")
-            
-            # No valid syllabus found
-            return (
-                False,                          # syllabus_ready
-                None,                           # syllabus_data
-                ERROR_NO_SYLLABUS,              # status_message
-                None,                           # all_syllabi_updated (no change)
-                gr.update(visible=False)        # hide dropdown if no valid syllabus
-            )
-        
-        # Function to handle syllabus selection from dropdown
-        def handle_syllabus_selection(selection, all_syllabi):
-            """Handle selection of a syllabus from the dropdown
-            
-            Args:
-                selection (str): Name of the selected syllabus
-                all_syllabi (list or State): List of all syllabi
+                Returns:
+                    tuple: (syllabus_ready, syllabus_data, status_message, all_syllabi_updated, syllabus_info, syllabus_details_visible)
+                """
+                # Get the syllabus directly from the provided syllabus generator
+                syllabus_json = sg.current_syllabus
                 
-            Returns:
-                tuple: (syllabus_ready, syllabus_data, status_message)
-            """
-            logger.info(f"Handling syllabus selection: {selection}")
+                logger.info("Checking for syllabus from generator")
+                
+                if syllabus_json is None:
+                    logger.info("No syllabus is available yet")
+                    return (
+                        False,                          # syllabus_ready
+                        None,                           # syllabus_data
+                        NO_SYLLABUS_STATUS,             # status_message
+                        None,                           # all_syllabi_updated (no change)
+                        None,                           # Empty JSON for JSON component
+                        gr.update(visible=False)        # hide syllabus details
+                    )
+                
+                # Basic validation of the syllabus structure
+                if ("syllabus_name" in syllabus_json and 
+                    "syllabus" in syllabus_json and 
+                    isinstance(syllabus_json["syllabus"], list) and 
+                    len(syllabus_json["syllabus"]) > 0):
+                    
+                    logger.info(f"Valid syllabus found with {len(syllabus_json['syllabus'])} stages: {syllabus_json.get('syllabus_name', 'Unknown')}")
+                    syllabus_name = syllabus_json.get("syllabus_name", "Unknown")
+                    audience = syllabus_json.get("target_audience", "")
+                    
+                    success_message = SUCCESS_SYLLABUS_TEMPLATE.format(
+                        syllabus_name,
+                        audience,
+                        len(syllabus_json['syllabus'])
+                    )
+                    
+                    # Update all_syllabi state
+                    def update_syllabi_list(all_syllabi_list, new_syllabus):
+                        # Create a copy of the all_syllabi list
+                        updated_list = list(all_syllabi_list.value) if all_syllabi_list is not None and hasattr(all_syllabi_list, "value") else []
+                        
+                        # Check if this syllabus already exists (by name)
+                        exists = False
+                        for i, existing_syllabus in enumerate(updated_list):
+                            if existing_syllabus.get("syllabus_name") == new_syllabus.get("syllabus_name"):
+                                # Replace with newer version
+                                updated_list[i] = new_syllabus
+                                exists = True
+                                break
+                        
+                        # Add if it doesn't exist
+                        if not exists:
+                            updated_list.append(new_syllabus)
+                        
+                        return updated_list
+                    
+                    # Get updated syllabi list
+                    all_syllabi_updated = update_syllabi_list(all_syllabi, syllabus_json)
+                    
+                    return (
+                        True,                             # syllabus_ready
+                        syllabus_json,                    # syllabus_data
+                        success_message,                  # status_message
+                        all_syllabi_updated,              # all_syllabi_updated
+                        syllabus_json,                    # Pass JSON directly for display
+                        gr.update(visible=True, open=True) # show syllabus details
+                    )
+                else:
+                    logger.warning(f"Found JSON but it's not a valid syllabus. Keys: {list(syllabus_json.keys())}")
+                    return (
+                        False,                          # syllabus_ready
+                        None,                           # syllabus_data
+                        ERROR_NO_SYLLABUS,              # status_message
+                        None,                           # all_syllabi_updated (no change)
+                        None,                           # Empty JSON for JSON component
+                        gr.update(visible=False)        # hide syllabus details
+                    )
             
-            # Extract actual list from State object if needed
-            all_syllabi_val = all_syllabi.value if hasattr(all_syllabi, "value") else all_syllabi
-            
-            if not selection or not all_syllabi_val:
-                return False, None, ERROR_NO_SELECTION
-            
-            # Find the selected syllabus in all_syllabi
-            selected_syllabus = None
-            for syllabus in all_syllabi_val:
-                if syllabus.get("syllabus_name") == selection:
-                    selected_syllabus = syllabus
-                    break
-            
-            if not selected_syllabus:
-                return False, None, ERROR_SELECTION_NOT_FOUND
-            
-            # Success - update the state with the selected syllabus
-            syllabus_name = selected_syllabus.get("syllabus_name", "Unknown")
-            audience = selected_syllabus.get("target_audience", "")
-            
-            success_message = SUCCESS_SYLLABUS_TEMPLATE.format(
-                syllabus_name,
-                audience,
-                len(selected_syllabus.get("syllabus", []))
-            )
-            
-            return True, selected_syllabus, success_message
+            return get_syllabus_from_generator
         
-        # Connect chat history to syllabus checking with the modified function
+        # Create the function with the syllabus generator as its closure
+        get_syllabus_handler = create_syllabus_getter(syllabus_generator)
+        
+        # Connect chat history to syllabus checking with the new function
         syllabus_chat.change(
-            fn=check_for_syllabus_and_update_button,
+            fn=get_syllabus_handler,
             inputs=[syllabus_chat],
             outputs=[
                 syllabus_ready, 
                 syllabus_data, 
                 syllabus_status, 
                 all_syllabi,
-                syllabus_dropdown
+                syllabus_info,
+                syllabus_details
             ]
-        )
-        
-        # Connect syllabus dropdown to selection handler
-        syllabus_dropdown.change(
-            fn=handle_syllabus_selection,
-            inputs=[syllabus_dropdown, all_syllabi],
-            outputs=[syllabus_ready, syllabus_data, syllabus_status]
         )
         
         # Update button interactivity when syllabus_ready state changes
@@ -270,28 +236,80 @@ def create_app():
             outputs=[start_teaching_btn]
         )
         
+        # Create a handler for updating button state based on syllabus data
+        def create_button_update_handler():
+            """Create a handler function for updating button state
+            
+            Returns:
+                function: A function that updates button state
+            """
+            def get_button_update(syllabus_data):
+                """Update button interactivity based on syllabus data
+                
+                Args:
+                    syllabus_data: Syllabus data to check
+                    
+                Returns:
+                    gr.update: Update for button interactivity
+                """
+                is_valid = (syllabus_data is not None and 
+                          "syllabus_name" in syllabus_data and 
+                          "syllabus" in syllabus_data)
+                return gr.update(interactive=is_valid)
+            
+            return get_button_update
+        
+        # Create the button update handler
+        button_update_handler = create_button_update_handler()
+        
+        # For immediate button update when syllabus is ready (directly after checking syllabus)
+        syllabus_data.change(
+            fn=button_update_handler,
+            inputs=[syllabus_data],
+            outputs=[start_teaching_btn]
+        )
+        
         # Function to handle the start teaching button click
-        def handle_start_teaching(syllabus_ready, syllabus_data):
-            # Extract values from State objects if needed 
-            syllabus_ready_val = syllabus_ready.value if hasattr(syllabus_ready, "value") else syllabus_ready
-            syllabus_data_val = syllabus_data.value if hasattr(syllabus_data, "value") else syllabus_data
+        def create_teaching_handler(tutor_service):
+            """Create a handler function for the start teaching button
             
-            logger.info(f"Handling start teaching button click, syllabus_ready: {syllabus_ready_val} syllabus_data_val:{syllabus_data_val}")
+            Args:
+                tutor_service: TutorBotService instance
+                
+            Returns:
+                function: A function that handles the start teaching button click
+            """
+            def handle_start_teaching(syllabus_ready, syllabus_data):
+                # Extract values from State objects if needed 
+                syllabus_ready_val = syllabus_ready.value if hasattr(syllabus_ready, "value") else syllabus_ready
+                syllabus_data_val = syllabus_data.value if hasattr(syllabus_data, "value") else syllabus_data
+                
+                logger.info(f"Handling start teaching button click, syllabus_ready: {syllabus_ready_val}")
+                
+                if syllabus_ready_val and syllabus_data_val:
+                    # Set syllabus for tutor bot
+                    try:
+                        syllabus_name = syllabus_data_val.get('syllabus_name', 'Unknown')
+                        stages_count = len(syllabus_data_val.get('syllabus', []))
+                        logger.info(f"Setting syllabus for tutor bot: '{syllabus_name}' with {stages_count} stages")
+                        
+                        tutor_service.set_syllabus(syllabus_data_val)
+                        return gr.Tabs(selected='teaching-tab')
+                    except Exception as e:
+                        logger.error(f"Error setting syllabus from state: {str(e)}", exc_info=True)
+                else:
+                    logger.warning("Cannot start teaching: No valid syllabus available")
+                
+                return gr.Tabs(selected='syllabus-tab')
             
-            if syllabus_ready_val and syllabus_data_val:
-                # Set syllabus for tutor bot
-                try:
-                    logger.info("Setting syllabus for tutor bot from state",syllabus_data_val)
-                    tutor_bot_service.set_syllabus(syllabus_data_val)
-                    return gr.Tabs(selected='teaching-tab')
-                except Exception as e:
-                    logger.error(f"Error setting syllabus from state: {str(e)}", exc_info=True)
-            
-            return gr.Tabs(selected='syllabus-tab')
+            return handle_start_teaching
+        
+        # Create the handler with the tutor bot service
+        teaching_handler = create_teaching_handler(tutor_bot_service)
     
         # Connect start teaching button to the handler function
         start_teaching_btn.click(
-            fn=handle_start_teaching,
+            fn=teaching_handler,
             inputs=[syllabus_ready, syllabus_data],
             outputs=tabs
         )
