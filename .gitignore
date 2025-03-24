@@ -50,3 +50,4 @@ instance/
 htmlcov/
 .pytest_cache/ 
 *.txt
+ref/

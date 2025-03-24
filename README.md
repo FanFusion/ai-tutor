@@ -1,6 +1,6 @@
-# Teaching Syllabus Generator
+# Teaching Syllabus Generator and Tutor
 
-A Gradio application that uses Gemini AI to generate teaching syllabuses from uploaded documents (PDF/TXT).
+A Gradio application that uses Gemini AI to generate teaching syllabuses from uploaded documents (PDF/TXT) and then provides an interactive teaching experience based on the generated syllabus.
 
 ## Features
 
@@ -8,8 +8,10 @@ A Gradio application that uses Gemini AI to generate teaching syllabuses from up
 - Direct multimodal document processing using Gemini's `Part.from_uri` capability
 - Generate structured teaching syllabuses using Gemini AI with JSON schema validation
 - Modify and refine syllabuses through natural language instructions
-- Support for multimedia content tags in the syllabus
-- Robust error handling with fallback mechanisms
+- Interactive teaching sessions based on the generated syllabus
+- Support for multimedia content tags in both the syllabus and teaching responses
+- Stage-by-stage progression through the teaching content
+- Automatic evaluation of user answers with progress tracking
 
 ## Setup
 
@@ -24,7 +26,7 @@ A Gradio application that uses Gemini AI to generate teaching syllabuses from up
    ```
 4. Run the application:
    ```
-   python app/main.py
+   python main.py
    ```
 
 ## Environment Variables
@@ -33,15 +35,34 @@ A Gradio application that uses Gemini AI to generate teaching syllabuses from up
 - `AWS_SECRET_ACCESS_KEY`: AWS secret key for S3 uploads
 - `AWS_REGION`: AWS region (default: us-east-1)
 - `S3_BUCKET_NAME`: S3 bucket name for document uploads
+- `S3_ACCESS_HOST`: S3 access host for public URLs
+- `AWS_S3_ENDPOINT`: S3 endpoint URL
 - `VERTEX_PROJECT_ID`: Google Cloud project ID (default: funplus-ai)
 - `VERTEX_LOCATION`: Google Cloud location (default: asia-east2)
+- `GEMINI_MODEL`: Gemini model for syllabus generation (default: gemini-1.5-pro)
+- `GEMINI_CHAT_MODEL`: Gemini model for interactive teaching (default: gemini-2.0-flash)
 
 ## Usage
 
+### Syllabus Generation
+
 1. Open the application in your browser
-2. Upload a document (PDF or TXT)
-3. Send a message to generate a syllabus (e.g., "Generate a syllabus from this document")
-4. Refine the syllabus with additional instructions (e.g., "Change the target audience to high school students")
+2. Go to the "Generate Syllabus" tab
+3. Upload a document (PDF or TXT)
+4. Send a message to generate a syllabus (e.g., "Generate a syllabus from this document")
+5. Refine the syllabus with additional instructions if needed
+
+### Interactive Teaching
+
+1. After generating a syllabus, click the "Start Teaching" button
+2. The application will switch to the "Teaching Session" tab
+3. Click "Start Teaching" to begin the teaching session
+4. Interact with the AI tutor by:
+   - Asking questions about the content
+   - Answering evaluation questions
+   - Using the multimedia input buttons to add image or video descriptions
+5. Use the navigation buttons to move between stages
+6. Click "End Teaching" when you're done
 
 ## Syllabus Format
 
@@ -70,6 +91,7 @@ The generated syllabus follows this JSON structure:
 The application uses:
 
 - **Gemini 1.5 Pro** for document analysis and syllabus generation
+- **Gemini 2.0 Flash** for interactive teaching sessions
 - **Multimodal document processing** with direct PDF/document analysis
 - **Schema-based structured output** to ensure consistent JSON formatting
 - **S3 storage** for document management

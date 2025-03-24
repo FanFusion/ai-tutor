@@ -97,12 +97,6 @@ class SyllabusGenerator:
                 # Format syllabus for display
                 formatted_syllabus = json.dumps(self.current_syllabus, indent=2, ensure_ascii=False)
                 self.logger.info("Syllabus generated successfully")
-                
-                # # Check syllabus structure
-                # syllabus_validation = self._validate_syllabus(self.current_syllabus)
-                # if syllabus_validation:
-                #     return f"Error validating syllabus: {syllabus_validation}\n\nReceived syllabus:\n```json\n{formatted_syllabus}\n```"
-                
                 return f"Generated teaching syllabus:\n```json\n{formatted_syllabus}\n```\n\nYou can now modify this syllabus by giving specific instructions."
             except Exception as e:
                 self.logger.error(f"Error generating syllabus: {str(e)}", exc_info=True)
@@ -125,12 +119,7 @@ class SyllabusGenerator:
                 formatted_syllabus = json.dumps(self.current_syllabus, indent=2, ensure_ascii=False)
                 
                 # Check syllabus structure
-                self.logger.debug("Validating updated syllabus")
-                syllabus_validation = self._validate_syllabus(self.current_syllabus)
-                if syllabus_validation:
-                    self.logger.error(f"Syllabus validation error: {syllabus_validation}")
-                    return f"Error validating updated syllabus: {syllabus_validation}\n\nReceived syllabus:\n```json\n{formatted_syllabus}\n```"
-                
+
                 self.logger.info("Syllabus updated successfully")
                 return f"Updated teaching syllabus:\n```json\n{formatted_syllabus}\n```"
             except Exception as e:
@@ -140,7 +129,7 @@ class SyllabusGenerator:
             self.logger.warning("No syllabus generated yet")
             return "Please generate a syllabus first by typing 'Generate a syllabus from this document'."
     
-    def _validate_syllabus(self, syllabus):
+
         """Validate the syllabus structure
         
         Args:
