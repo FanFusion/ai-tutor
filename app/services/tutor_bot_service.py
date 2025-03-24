@@ -50,13 +50,8 @@ class TutorBotService:
         self.current_stage_index = 0
         self.is_teaching_started = False
         
-        # Initialize a new chat session
-        self.chat_session = self.model.start_chat()
-        
-        # Prime the chat session with system instructions
-        system_prompt = self._create_system_prompt()
-        response=self._send_message_to_model(system_prompt, is_system=True)
-        self.logger.info(f"Syllabus set and chat session initialized, syllabus_info:{self.syllabus_info} response:{response}")
+        # No longer initializing chat session or sending system prompt here
+        self.logger.info(f"Syllabus set, syllabus_info:{self.syllabus_info}")
     
     def process_message(self, input_type, input_content, chat_history):
         """Process a message from the user or admin and generate a response
@@ -168,6 +163,11 @@ class TutorBotService:
         self.current_stage_index = 0
         self.is_teaching_started = True
         
+        # Initialize a new chat session and prime it with system instructions
+        self.chat_session = self.model.start_chat()
+        system_prompt = self._create_system_prompt()
+        system_response=self._send_message_to_model(system_prompt, is_system=True)
+        self.logger.info(f"Syllabus set and chat session initialized, syllabus_info:{self.syllabus_info} response:{system_response}")
         # Create a greeting prompt
         current_stage_info = self._get_current_stage_info()
         greeting_prompt = self._create_prompt("admin", "start teaching", current_stage_info)
@@ -279,7 +279,7 @@ class TutorBotService:
             "response_content": "Your actual response content here"
         }}
         
-        Here's the syllabus you will be teaching:
+        Here's the full syllabus you will be teaching:
         
         {syllabus_str}
         
@@ -303,7 +303,7 @@ class TutorBotService:
            Current_stage_info: (JSON of current stage)
         
         5. Admin commands have special meanings:
-           - "start teaching": Begin the teaching session with a greeting
+           - "start teaching": Begin the teaching session with a greeting,the greeting content should relate to the total syllabus.
            - "end teaching": End the teaching session with a conclusion
            - "start stage": Begin teaching the current stage
            - "next stage": Move to the next stage
