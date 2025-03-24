@@ -38,7 +38,7 @@ class GeminiService:
                                 "items": {"type": "string"}
                             },
                             "judge_question": {"type": "string"},
-                            "judge_answer": {"type": "string"}
+                            "judge_rule": {"type": "string"}
                         },
                         "required": [
                             "stage_id",
@@ -47,7 +47,7 @@ class GeminiService:
                             "target",
                             "teaching_knowledge",
                             "judge_question",
-                            "judge_answer"
+                            "judge_rule"
                         ]
                     }
                 }
@@ -93,12 +93,37 @@ class GeminiService:
            - Key teaching knowledge points
            - Evaluation questions to test understanding
            - Expected answers to evaluation questions
-        
+        You will provide the syllabus in JSON format as follows:
+     
+        syllabus_name: string, The name of the syllabus
+        target_audience: string, The target audience of the syllabus
+        syllabus: List of syllabus sub object
+        syllabus sub object :{
+            "stage_id": string,The name of each stage
+            "stage_description": string, simpple description of each stage
+            "judge_media_allowed": [list of allowed media types],such as ["image","text","video"]
+            "target": string, the target of this stage
+            "teaching_knowledge":List of string,the knowledge points of this stage,MUST strictly follow the syllabus that provided by the user,you must provide relevant knowledge points for this stage
+            "judge_question":string,the question to pass this stage
+            "judge_rule":string,the rule to judge the answer if the answer is correct,the user will pass this stage
+        }
+
+        IMPORTANT!: YOU MUST FOLLOW THE FOLLOWING RULES ABOUT THE MULTIMEDIA ELEMENTS:
         For any content that should include multimedia elements, use appropriate tags:
         - For images: <image>detailed description of what the image should show</image>
         - For videos: <video>detailed description of what the video should contain</video>
+        - For interactive elements: <interactive>detailed description of what the interactive element should contain</interactive>
         
-        Analyze the document thoroughly and organize the content into a logical learning progression.
+        The target,teaching_knowledge,judge_question,judge_rule may provide multimedia elements according to the raw data that provided by the user
+        You should provide multimedia tags when you think it is necessary
+        for example:
+        target:help the student to understand the how gravity works
+        teaching_knowledge:<video>a picture of a person jumping and falling</video> <image>a picture of apple falling towards Newton's head</image>
+        judge_question: which image is effective to explain the gravity? <image> water flows from high to low</image> <image>a car is driving on the road quickly</image>
+        judge_rule: the correct answer is the image that shows the water flows from high to low
+    
+        
+        Now,Analyze the document thoroughly and organize the content into a logical learning progression.
         Return a structured JSON object following the required format.
         """
         
@@ -111,7 +136,7 @@ class GeminiService:
             response = self.model.generate_content(
                 contents,
                 generation_config=GenerationConfig(
-                    max_output_tokens=4096,
+                    max_output_tokens=8192,
                     temperature=0.2,
                     response_mime_type="application/json",
                     response_schema=self.syllabus_schema
@@ -124,47 +149,8 @@ class GeminiService:
             return result
             
         except Exception as schema_error:
-            self.logger.error(f"Error generating structured syllabus: {str(schema_error)}", exc_info=True)
-            
-            # Fallback to text generation without schema
-            try:
-                self.logger.info("Falling back to text generation without schema")
-                response = self.model.generate_content(
-                    contents,
-                    generation_config=GenerationConfig(
-                        max_output_tokens=4096,
-                        temperature=0.2
-                    )
-                )
-                
-                response_text = response.text
-                
-                # Try to parse response as JSON directly
-                try:
-                    result = json.loads(response_text)
-                    self.logger.info("Successfully parsed response as JSON")
-                    return result
-                except json.JSONDecodeError:
-                    self.logger.warning("Failed to parse response as JSON, attempting to extract JSON from text")
-                    # If direct parsing fails, try to extract JSON from text
-                    json_start = response_text.find('{')
-                    json_end = response_text.rfind('}') + 1
-                    
-                    if json_start != -1 and json_end != -1:
-                        json_content = response_text[json_start:json_end]
-                        try:
-                            result = json.loads(json_content)
-                            self.logger.info("Successfully extracted and parsed JSON content")
-                            return result
-                        except json.JSONDecodeError:
-                            self.logger.error("Could not parse extracted content as JSON")
-                            return {"error": "Could not parse extracted content as JSON"}
-                    else:
-                        self.logger.error("Could not find JSON content in response")
-                        return {"error": "Could not find JSON content in response"}
-            except Exception as fallback_error:
-                self.logger.error(f"Failed to generate syllabus: {str(fallback_error)}", exc_info=True)
-                return {"error": f"Failed to generate syllabus: {str(fallback_error)}"}
+            self.logger.error(f"Failed to generate syllabus: {str(schema_error)}", exc_info=True)
+            return {"error": f"Failed to generate syllabus: {str(schema_error)}"}
     
     def update_syllabus(self, current_syllabus, user_message):
         """Update a syllabus based on user instructions
@@ -281,9 +267,7 @@ class GeminiService:
         # Map file extensions to MIME types
         mime_types = {
             '.pdf': 'application/pdf',
-            '.txt': 'text/plain',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            '.txt': 'text/plain'
         }
         
         mime_type = mime_types.get(file_extension, 'application/pdf')
