@@ -1,8 +1,7 @@
 import json
 import os
-from vertexai.generative_models import GenerativeModel, ChatSession
+from vertexai.generative_models import GenerativeModel, ChatSession, GenerationConfig
 from app.utils.gr_logger import setup_logger
-import re
 
 class TutorBotService:
     """Service for handling the tutoring chatbot interactions"""
@@ -23,6 +22,21 @@ class TutorBotService:
         self.current_stage_index = 0
         self.is_teaching_started = False
         
+        # Define response schema for structured output
+        self.response_schema = {
+            "type": "object",
+            "properties": {
+                "stage_id": {"type": "string"},
+                "response_type": {
+                    "type": "string",
+                    "enum": ["teach", "explain", "judge", "greet"]
+                },
+                "is_pass": {"type": "boolean"},
+                "response_content": {"type": "string"}
+            },
+            "required": ["stage_id", "response_type", "response_content","is_pass"]
+        }
+        
         self.logger.debug("TutorBotService initialized successfully")
     
     def set_syllabus(self, syllabus_info):
@@ -41,8 +55,8 @@ class TutorBotService:
         
         # Prime the chat session with system instructions
         system_prompt = self._create_system_prompt()
-        self._send_message_to_model(system_prompt, is_system=True)
-        self.logger.info("Syllabus set and chat session initialized")
+        response=self._send_message_to_model(system_prompt, is_system=True)
+        self.logger.info(f"Syllabus set and chat session initialized, syllabus_info:{self.syllabus_info} response:{response}")
     
     def process_message(self, input_type, input_content, chat_history):
         """Process a message from the user or admin and generate a response
@@ -77,59 +91,34 @@ class TutorBotService:
         # Get response from model
         response_text = self._send_message_to_model(prompt)
         
-        try:
-            # Parse the response as JSON
-            response_json = json.loads(response_text)
+        # Parse the response as JSON
+        response_json = json.loads(response_text)
+        
+        # Extract the response content
+        response_content = response_json.get("response_content", "")
+        response_type = response_json.get("response_type", "")
+        is_pass = response_json.get("is_pass", False)
+        
+        # Add to chat history
+        if input_type == "user":
+            chat_history.append((input_content, response_content))
+        elif input_type == "admin" and input_content.lower() not in ["start teaching", "end teaching"]:
+            # Don't show admin commands in chat history except for special commands
+            pass
+        else:
+            chat_history.append(("", response_content))
             
-            # Validate response structure
-            if not self._validate_response(response_json):
-                self.logger.error("Invalid response structure")
-                error_msg = "I encountered an error in processing your request. Let me try again."
-                chat_history.append((input_content if input_type == "user" else "", error_msg))
-                return chat_history, None
+        # Handle stage progression if needed
+        stage_updated = False
+        if (input_type == "admin" and "next stage" in input_content.lower()) or \
+           (response_type == "judge" and is_pass and self.current_stage_index < len(self.syllabus_info["syllabus"]) - 1):
+            # Move to next stage
+            self.current_stage_index += 1
+            stage_updated = True
+            self.logger.info(f"Moving to next stage: {self.current_stage_index}")
             
-            # Extract the response content
-            response_content = response_json.get("response_content", "")
-            response_type = response_json.get("response_type", "")
-            is_pass = response_json.get("is_pass", False)
-            
-            # Add to chat history
-            if input_type == "user":
-                chat_history.append((input_content, response_content))
-            elif input_type == "admin" and input_content.lower() not in ["start teaching", "end teaching"]:
-                # Don't show admin commands in chat history except for special commands
-                pass
-            else:
-                chat_history.append(("", response_content))
-                
-            # Handle stage progression if needed
-            stage_updated = False
-            if (input_type == "admin" and "next stage" in input_content.lower()) or \
-               (response_type == "judge" and is_pass and self.current_stage_index < len(self.syllabus_info["syllabus"]) - 1):
-                # Move to next stage
-                self.current_stage_index += 1
-                stage_updated = True
-                self.logger.info(f"Moving to next stage: {self.current_stage_index}")
-                
-                # If advancing stage, send a teaching message for the new stage
-                if stage_updated and self.current_stage_index < len(self.syllabus_info["syllabus"]):
-                    teach_prompt = self._create_prompt("admin", "start stage", self._get_current_stage_info())
-                    teach_response_text = self._send_message_to_model(teach_prompt)
-                    
-                    try:
-                        teach_response_json = json.loads(teach_response_text)
-                        teach_content = teach_response_json.get("response_content", "")
-                        chat_history.append(("", teach_content))
-                    except json.JSONDecodeError:
-                        self.logger.error("Failed to parse teaching response as JSON")
-                
-            elif input_type == "admin" and "previous stage" in input_content.lower() and self.current_stage_index > 0:
-                # Move to previous stage
-                self.current_stage_index -= 1
-                stage_updated = True
-                self.logger.info(f"Moving to previous stage: {self.current_stage_index}")
-                
-                # Send teaching message for the previous stage
+            # If advancing stage, send a teaching message for the new stage
+            if stage_updated and self.current_stage_index < len(self.syllabus_info["syllabus"]):
                 teach_prompt = self._create_prompt("admin", "start stage", self._get_current_stage_info())
                 teach_response_text = self._send_message_to_model(teach_prompt)
                 
@@ -138,15 +127,26 @@ class TutorBotService:
                     teach_content = teach_response_json.get("response_content", "")
                     chat_history.append(("", teach_content))
                 except json.JSONDecodeError:
-                    self.logger.error("Failed to parse teaching response as JSON")
+                    self.logger.error(f"Failed to parse teaching response as JSON: {teach_response_text}")
             
-            return chat_history, stage_updated
+        elif input_type == "admin" and "previous stage" in input_content.lower() and self.current_stage_index > 0:
+            # Move to previous stage
+            self.current_stage_index -= 1
+            stage_updated = True
+            self.logger.info(f"Moving to previous stage: {self.current_stage_index}")
             
-        except json.JSONDecodeError:
-            self.logger.error("Failed to parse response as JSON", exc_info=True)
-            error_msg = "I encountered an error in my response format. Let me try again."
-            chat_history.append((input_content if input_type == "user" else "", error_msg))
-            return chat_history, None
+            # Send teaching message for the previous stage
+            teach_prompt = self._create_prompt("admin", "start stage", self._get_current_stage_info())
+            teach_response_text = self._send_message_to_model(teach_prompt)
+            
+            try:
+                teach_response_json = json.loads(teach_response_text)
+                teach_content = teach_response_json.get("response_content", "")
+                chat_history.append(("", teach_content))
+            except json.JSONDecodeError:
+                self.logger.error(f"Failed to parse teaching response as JSON: {teach_response_text}")
+        
+        return chat_history, stage_updated
     
     def start_teaching(self, chat_history):
         """Start the teaching session
@@ -179,21 +179,23 @@ class TutorBotService:
             greeting_response_json = json.loads(greeting_response_text)
             greeting_content = greeting_response_json.get("response_content", "")
             chat_history.append(("", greeting_content))
-            
-            # Then automatically trigger the first stage teaching content
-            teach_prompt = self._create_prompt("admin", "start stage", current_stage_info)
-            teach_response_text = self._send_message_to_model(teach_prompt)
-            
-            try:
-                teach_response_json = json.loads(teach_response_text)
-                teach_content = teach_response_json.get("response_content", "")
-                chat_history.append(("", teach_content))
-            except json.JSONDecodeError:
-                self.logger.error("Failed to parse teaching response as JSON")
-            
         except json.JSONDecodeError:
-            self.logger.error("Failed to parse greeting response as JSON")
+            self.logger.error(f"Failed to parse greeting response as JSON: {greeting_response_text}")
             chat_history.append(("", "Welcome to the teaching session! Let's get started."))
+        
+        # Then automatically trigger the first stage teaching content
+        teach_prompt = self._create_prompt("admin", "start stage", current_stage_info)
+        teach_response_text = self._send_message_to_model(teach_prompt)
+        
+        try:
+            teach_response_json = json.loads(teach_response_text)
+            teach_content = teach_response_json.get("response_content", "")
+            chat_history.append(("", teach_content))
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to parse teaching response as JSON: {teach_response_text}")
+            # Fallback response if JSON parsing fails
+            stage_name = current_stage_info.get("stage_description", "this stage")
+            chat_history.append(("", f"Let's begin learning about {stage_name}."))
         
         return chat_history
     
@@ -223,7 +225,7 @@ class TutorBotService:
             ending_content = ending_response_json.get("response_content", "")
             chat_history.append(("", ending_content))
         except json.JSONDecodeError:
-            self.logger.error("Failed to parse ending response as JSON")
+            self.logger.error(f"Failed to parse ending response as JSON: {ending_response_text}")
             chat_history.append(("", "Thank you for completing the teaching session! I hope you learned a lot."))
         
         self.is_teaching_started = False
@@ -293,6 +295,7 @@ class TutorBotService:
         3. For multimedia content in response_content, use these tags:
            - <image>detailed description of what the image should show</image>
            - <video>detailed description of what the video should contain</video>
+           - <interactive>detailed description of what the interactive element should contain</interactive>
         
         4. You will receive input in this format:
            Input_type: admin/user
@@ -314,7 +317,11 @@ class TutorBotService:
         
         9. response_content is the ONLY part that will be shown to the user
         
-        Remember: Your response must ALWAYS be a valid JSON object following the specified format.
+        10. For the teaching_knowledge items, ensure they are presented clearly with multimedia elements where appropriate
+        
+        11. When judging answers, strictly follow the judge_rule defined in the syllabus for that stage
+        
+        12. ALWAYS return a valid JSON object with the exact structure as shown above.
         """
         
         return system_prompt
@@ -333,12 +340,25 @@ class TutorBotService:
         # Convert current stage info to string if it exists
         stage_info_str = json.dumps(current_stage_info) if current_stage_info else "null"
         
+        # Create prompt exactly matching the format in 规划.txt
         prompt = f"""
         Input_type: {input_type}
         Input: {input_content}
         Current_stage_info: {stage_info_str}
         
-        Respond with a properly formatted JSON object as instructed.
+        Remember to respond with a properly formatted JSON object as required:
+        {{
+            "stage_id": "current stage id",
+            "response_type": "teach/explain/judge/greet",  
+            "is_pass": true/false,
+            "response_content": "Your actual response content here"
+        }}
+        
+        When generating the response, make sure:
+        1. stage_id matches the current stage you're teaching
+        2. response_type is appropriate for the interaction (teach, explain, judge, greet)
+        3. is_pass is only true when the user answer meets the judge_rule criteria
+        4. response_content contains rich educational content with multimedia tags where appropriate
         """
         
         return prompt
@@ -354,14 +374,27 @@ class TutorBotService:
             str: The response from the model
         """
         try:
-            self.logger.debug(f"Sending message to model: {message[:100]}...")
+            self.logger.info(f"Sending message to model: {message}...")
             
             if not self.chat_session:
                 self.logger.info("Creating new chat session")
                 self.chat_session = self.model.start_chat()
             
-            response = self.chat_session.send_message(message)
-            self.logger.debug(f"Received response from model: {response.text[:100]}...")
+            # Configure generation with JSON schema for structured output
+            generation_config = GenerationConfig(
+                max_output_tokens=4096,
+                temperature=0.2,
+                response_mime_type="application/json" if not is_system else None,
+                response_schema=self.response_schema if not is_system else None
+            )
+            
+            # Send message with generation config
+            response = self.chat_session.send_message(
+                message,
+                generation_config=generation_config
+            )
+            
+            self.logger.info(f"Received response from model: {response.text}...")
             
             return response.text
         except Exception as e:
@@ -396,5 +429,17 @@ class TutorBotService:
         if response["response_type"] == "judge" and "is_pass" not in response:
             self.logger.error("Missing is_pass field for judge response_type")
             return False
+            
+        # Validate other type-specific fields
+        if response["response_type"] == "teach" and not response["response_content"]:
+            self.logger.error("Empty response_content for teach response_type")
+            return False
+            
+        # Ensure stage_id matches the current stage (if available)
+        if self.syllabus_info and self.current_stage_index < len(self.syllabus_info.get("syllabus", [])):
+            current_stage = self.syllabus_info["syllabus"][self.current_stage_index]
+            if current_stage.get("stage_id") != response["stage_id"] and response["stage_id"]:
+                self.logger.warning(f"Stage ID mismatch: expected {current_stage.get('stage_id')}, got {response['stage_id']}")
+                # Don't fail validation for this, just log a warning
         
         return True 

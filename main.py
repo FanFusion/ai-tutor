@@ -123,10 +123,10 @@ def create_app():
                             # Create teaching interface
                             logger.info("Setting up teaching interface")
                             teaching_chat, current_stage, stage_progress = create_teaching_interface(tutor_bot_service)
-                            
-                    # # Ensure stage indicators update properly
-                    # current_stage.change(lambda x: x, current_stage, current_stage_display)
-                    # stage_progress.change(lambda x: x, stage_progress, progress_display)
+                        
+                # Ensure stage indicators update properly
+                current_stage.change(lambda x: x, current_stage, current_stage_display)
+                stage_progress.change(lambda x: x, stage_progress, progress_display)
         
         # Modified function to update button interactive state and manage syllabi
         def check_for_syllabus_and_update_button(chat_history):
@@ -300,85 +300,24 @@ def create_app():
             syllabus_ready_val = syllabus_ready.value if hasattr(syllabus_ready, "value") else syllabus_ready
             syllabus_data_val = syllabus_data.value if hasattr(syllabus_data, "value") else syllabus_data
             
-            logger.info(f"Handling start teaching button click, syllabus_ready: {syllabus_ready_val}")
+            logger.info(f"Handling start teaching button click, syllabus_ready: {syllabus_ready_val} syllabus_data_val:{syllabus_data_val}")
             
             if syllabus_ready_val and syllabus_data_val:
                 # Set syllabus for tutor bot
                 try:
-                    logger.info("Setting syllabus for tutor bot from state")
+                    logger.info("Setting syllabus for tutor bot from state",syllabus_data_val)
                     tutor_bot_service.set_syllabus(syllabus_data_val)
                     return gr.Tabs(selected='teaching-tab')
                 except Exception as e:
                     logger.error(f"Error setting syllabus from state: {str(e)}", exc_info=True)
             
             return gr.Tabs(selected='syllabus-tab')
-        
-        # Function to switch to teaching tab and set syllabus
-        def switch_to_teaching(syllabus_ready, syllabus_data):
-            """Switch to teaching tab and set syllabus for tutor bot
-            
-            Args:
-                syllabus_ready (bool or State): Whether a valid syllabus has been generated
-                syllabus_data (dict or State): The syllabus data if already parsed
-                
-            Returns:
-                tuple: (placeholder_update, teaching_status_update, container_update)
-            """
-            # Extract values from State objects if needed
-            syllabus_ready_val = syllabus_ready.value if hasattr(syllabus_ready, "value") else syllabus_ready
-            syllabus_data_val = syllabus_data.value if hasattr(syllabus_data, "value") else syllabus_data
-            
-            logger.info(f"Switching to teaching tab, syllabus_ready: {syllabus_ready_val}")
-            
-            try:
-                # Case 1: We already have valid syllabus data from state
-                if syllabus_ready_val and syllabus_data_val:
-                    try:
-                        # Generate status message with syllabus info
-                        syllabus_name = syllabus_data_val.get("syllabus_name", "Unknown")
-                        audience = syllabus_data_val.get("target_audience", "")
-                        num_stages = len(syllabus_data_val.get("syllabus", []))
-                        
-                        teaching_success_msg = TEACHING_SUCCESS_TEMPLATE.format(
-                            syllabus_name,
-                            audience,
-                            num_stages
-                        )
-                        logger.info(f"Teaching success message: {teaching_success_msg}")
-                        # Show teaching interface
-                        return (
-                            gr.update(visible=False),
-                            gr.update(visible=True, value=teaching_success_msg),
-                        )
-                    except Exception as e:
-                        logger.error(f"Error updating teaching interface: {str(e)}", exc_info=True)
-                
-                # Case 2: No valid syllabus found or error occurred
-                logger.warning("No valid syllabus found or error setting syllabus")
-                # Show error
-                return (
-                    gr.update(visible=True),
-                    gr.update(visible=False)
-                )
-                
-            except Exception as e:
-                logger.error(f"Unexpected error in switch_to_teaching: {str(e)}", exc_info=True)
-                # Show error
-                return (
-                    gr.update(visible=True),
-                    gr.update(visible=False),
-                    gr.update(visible=False)
-                )
-            
+    
         # Connect start teaching button to the handler function
         start_teaching_btn.click(
             fn=handle_start_teaching,
             inputs=[syllabus_ready, syllabus_data],
             outputs=tabs
-        ).then(
-            fn=switch_to_teaching,
-            inputs=[syllabus_ready, syllabus_data],
-            outputs=[placeholder_message, teaching_status]
         )
     
     logger.info("Application initialization complete")
