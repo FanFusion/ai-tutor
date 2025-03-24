@@ -29,19 +29,48 @@ MAIN_CSS="""
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        /* Make examples closer to chatbox */
+        .gradio-container .examples-parent {
+            margin-top: -8px !important;
+        }
+        /* Target examples more generally since we can't use classes */
+        .gradio-container .examples {
+            margin-top: -8px !important;
+        }
+        /* Styling for collapsible sections */
+        details {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 0.5em;
+            margin-bottom: 1em;
+            background-color: #f9f9f9;
+        }
+        summary {
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0.5em;
+            margin: -0.5em;
+            background-color: #f0f0f0;
+        }
+        details[open] summary {
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 0.5em;
+        }
     """
 
 SYLLABUS_DESCRIPTION="""
-                        ## Instructions
-                        
-                        1. Upload your document using the file uploader below
-                        2. Ask the AI to generate a syllabus
-                        3. Provide instructions to modify the syllabus as needed
-                        
-                        The document will be processed using Gemini's multimodal capabilities,
-                        allowing for direct analysis of PDFs and other document formats.
-                        
-                        The syllabus will be generated in a structured JSON format that follows a specific schema for teaching content.
+                        <details>
+                            <summary>Instructions</summary>
+                            
+                            1. Upload your document using the file uploader below
+                            2. Ask the AI to generate a syllabus
+                            3. Provide instructions to modify the syllabus as needed
+                            
+                            The document will be processed using Gemini's multimodal capabilities,
+                            allowing for direct analysis of PDFs and other document formats.
+                            
+                            The syllabus will be generated in a structured JSON format that follows a specific schema for teaching content.
+                        </details>
                         """
                         
 SYLLABUS_FORMAT="""
@@ -63,19 +92,21 @@ SYLLABUS_FORMAT="""
                         
                         
 TEACHING_TUTOR_DESCRIPTION="""
-                            ## Teaching Session
-                            
-                            This is an interactive teaching session based on the syllabus you generated.
-                            
-                            The AI tutor will guide you through each stage of the syllabus, providing:
-                            - Explanations of concepts
-                            - Answers to your questions
-                            - Evaluation of your answers to questions
-                            
-                            Use the controls below to:
-                            - Start/end the teaching session
-                            - Navigate between stages
-                            - Add multimedia descriptions in your responses
+                            <details>
+                                <summary>Teaching Session</summary>
+                                
+                                This is an interactive teaching session based on the syllabus you generated.
+                                
+                                The AI tutor will guide you through each stage of the syllabus, providing:
+                                - Explanations of concepts
+                                - Answers to your questions
+                                - Evaluation of your answers to questions
+                                
+                                Use the controls below to:
+                                - Start/end the teaching session
+                                - Navigate between stages
+                                - Add multimedia descriptions in your responses
+                            </details>
                             """
 
 # Main application title and description
@@ -106,6 +137,7 @@ NEXT_STAGE_TEXT = "Next Stage"
 PREV_STAGE_TEXT = "Previous Stage"
 END_TEACHING_TEXT = "End Teaching"
 CLEAR_BTN_TEXT = "Clear"
+SEND_BTN_TEXT = "Send"
 
 # Multimedia input
 MULTIMEDIA_HEADING = "### Add Multimedia Input:"
@@ -134,30 +166,37 @@ CHAT_EXAMPLE_PROMPTS = [
 
 # Chat interface description
 CHAT_INTERFACE_DESCRIPTION = """
-    ## Teaching Syllabus Generator
-    
-    This chatbot can generate and modify teaching syllabuses based on uploaded documents.
-    
-    **Usage Instructions:**
-    1. Upload a document (PDF/TXT) using the file upload component
-    2. Ask the chatbot to generate a syllabus from the document
-    3. Modify the syllabus by providing specific instructions
-    
-    The syllabus follows a structured JSON format with stages, each containing:
-    - Stage ID and description
-    - Allowed media types for evaluation
-    - Learning targets and knowledge points
-    - Evaluation questions and answers
+    <details>
+        <summary>Teaching Syllabus Generator Instructions</summary>
+        
+        This chatbot can generate and modify teaching syllabuses based on uploaded documents.
+        
+        **Usage Instructions:**
+        1. Upload a document (PDF/TXT) using the file upload component
+        2. Ask the chatbot to generate a syllabus from the document
+        3. Modify the syllabus by providing specific instructions
+        
+        The syllabus follows a structured JSON format with stages, each containing:
+        - Stage ID and description
+        - Allowed media types for evaluation
+        - Learning targets and knowledge points
+        - Evaluation questions and answers
+        
+        **Multimedia content can be specified using tags:**
+        - `<image>description</image>`
+        - `<video>description</video>`
+    </details>
     """
 
 # File upload component strings
 FILE_UPLOAD_LABEL = "Upload Document"
 FILE_UPLOAD_DESCRIPTION = """
-    ### Supported Document Formats
-    
-    - PDF documents (recommended for best results)
-    - Text files (.txt)
-    
+    <details>
+        <summary>Supported Document Formats</summary>
+        
+        - PDF documents (recommended for best results)
+        - Text files (.txt)
+    </details>
     """
 
 # Success and error message templates

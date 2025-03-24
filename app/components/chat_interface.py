@@ -19,17 +19,19 @@ def create_chat_interface(syllabus_generator):
     chatbot = gr.Chatbot(height=500)
     logger.debug("Initialized chatbot component")
     
+    # Add descriptive message
+    info_text = gr.Markdown(CHAT_INTERFACE_DESCRIPTION)
+    
     # Create message input
     msg = gr.Textbox(
         placeholder=CHAT_PLACEHOLDER,
         container=False
     )
     
-    # Create clear button
-    clear = gr.Button(CLEAR_BTN_TEXT)
-    
-    # Add descriptive message
-    info_text = gr.Markdown(CHAT_INTERFACE_DESCRIPTION)
+    # Create buttons for chat interaction
+    with gr.Row():
+        send_btn = gr.Button(SEND_BTN_TEXT, variant="primary", scale=3)
+        clear = gr.Button(CLEAR_BTN_TEXT, scale=1)
     
     # Add example prompts for users
     examples = CHAT_EXAMPLE_PROMPTS
@@ -54,12 +56,13 @@ def create_chat_interface(syllabus_generator):
     # Connect components
     logger.debug("Connecting chat interface components")
     msg.submit(respond, [msg, chatbot], [msg, chatbot])
+    send_btn.click(respond, [msg, chatbot], [msg, chatbot])
     clear.click(lambda: None, None, chatbot, queue=False)
     
     # Add examples
     gr.Examples(
         examples=examples,
-        inputs=msg,
+        inputs=msg
     )
     
     logger.info("Chat interface created successfully")

@@ -52,7 +52,6 @@ def create_app():
                         gr.Markdown(SYLLABUS_DESCRIPTION)
                         logger.debug("Setting up file upload component")
                         file_upload = create_file_upload()
-                        gr.Markdown(SYLLABUS_FORMAT)
                         
                         # Add status message with styling for different states
                         syllabus_status = gr.Markdown(
@@ -95,38 +94,15 @@ def create_app():
             
             # Second tab: Teaching Interface (will be enabled after syllabus generation)
             with gr.Tab("Teaching Session", id="teaching-tab") as teaching_tab:
-                # Placeholder message when no syllabus is available
-                placeholder_message = gr.Markdown(
-                    PLACEHOLDER_MESSAGE,
-                    visible=True, 
-                    elem_id="placeholder_message"
-                )
-                
-                # Teaching status indicator - initially hidden
-                teaching_status = gr.Markdown(
-                    SYLLABUS_LOADED_STATUS,
-                    visible=False,
-                    elem_id="teaching_status"
-                )
-                
                 # Teaching interface container - initially hidden
                 with gr.Row():
                         with gr.Column(scale=1):
                             gr.Markdown(TEACHING_TUTOR_DESCRIPTION)
-                            
-                            # Display current stage and progress
-                            current_stage_display = gr.Markdown(TEACHING_STAGE_NOT_STARTED)
-                            progress_display = gr.Markdown(TEACHING_PROGRESS_NOT_STARTED)
-                            
                         with gr.Column(scale=2):
 
                             # Create teaching interface
                             logger.info("Setting up teaching interface")
                             teaching_chat, current_stage, stage_progress = create_teaching_interface(tutor_bot_service)
-                        
-                # Ensure stage indicators update properly
-                current_stage.change(lambda x: x, current_stage, current_stage_display)
-                stage_progress.change(lambda x: x, stage_progress, progress_display)
         
         # Modified function to update button interactive state and manage syllabi
         def check_for_syllabus_and_update_button(chat_history):

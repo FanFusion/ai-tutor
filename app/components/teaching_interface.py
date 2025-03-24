@@ -166,7 +166,7 @@ def create_teaching_interface(tutor_bot_service):
     # Add examples
     gr.Examples(
         examples=example_questions,
-        inputs=msg,
+        inputs=msg
     )
     
     logger.info("Teaching interface created successfully")
