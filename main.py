@@ -26,9 +26,9 @@ def create_app():
     initialize_vertex_ai()
     
     logger.info("Creating Gradio application interface")
-    with gr.Blocks(title="Teaching Syllabus Generator and Tutor", css=MAIN_CSS) as app:
-        gr.Markdown("# Teaching Syllabus Generator and Tutor")
-        gr.Markdown("Generate a teaching syllabus from a document and use it for interactive teaching.")
+    with gr.Blocks(title=APP_TITLE, css=MAIN_CSS) as app:
+        gr.Markdown(f"# {APP_TITLE}")
+        gr.Markdown(APP_DESCRIPTION)
         
         # Create shared services
         logger.debug("Initializing services")
@@ -56,7 +56,7 @@ def create_app():
                         
                         # Add status message with styling for different states
                         syllabus_status = gr.Markdown(
-                            "**Status**: No syllabus generated yet. Please generate a syllabus first.",
+                            NO_SYLLABUS_STATUS,
                             elem_id="syllabus-status"
                         )
                         
@@ -73,7 +73,7 @@ def create_app():
                         # Add start teaching button with enhanced styling
                         with gr.Row():
                             start_teaching_btn = gr.Button(
-                                "▶️ Start Teaching Session",
+                                START_TEACHING_BTN_TEXT,
                                 variant="primary", 
                                 size="lg", 
                                 interactive=False,
@@ -97,14 +97,14 @@ def create_app():
             with gr.Tab("Teaching Session", id="teaching-tab") as teaching_tab:
                 # Placeholder message when no syllabus is available
                 placeholder_message = gr.Markdown(
-                    "### Please generate a syllabus in the 'Generate Syllabus' tab first before starting the teaching session.",
+                    PLACEHOLDER_MESSAGE,
                     visible=True, 
                     elem_id="placeholder_message"
                 )
                 
                 # Teaching status indicator - initially hidden
                 teaching_status = gr.Markdown(
-                    "**Status**: Syllabus loaded successfully. You can now start the teaching session.",
+                    SYLLABUS_LOADED_STATUS,
                     visible=False,
                     elem_id="teaching_status"
                 )
@@ -116,8 +116,8 @@ def create_app():
                             gr.Markdown(TEACHING_TUTOR_DESCRIPTION)
                             
                             # Display current stage and progress
-                            current_stage_display = gr.Markdown("### Current Stage: Not started")
-                            progress_display = gr.Markdown("### Progress: 0/0 stages")
+                            current_stage_display = gr.Markdown(TEACHING_STAGE_NOT_STARTED)
+                            progress_display = gr.Markdown(TEACHING_PROGRESS_NOT_STARTED)
                             
                         with gr.Column(scale=2):
                             # Create teaching interface
@@ -163,14 +163,11 @@ def create_app():
                             syllabus_name = syllabus_json.get("syllabus_name", "Unknown")
                             audience = syllabus_json.get("target_audience", "")
                             
-                            success_message = f"""
-                            <div class="success-status">
-                            <strong>✅ Success!</strong> Syllabus "{syllabus_name}" generated successfully.
-                            <br>Target audience: {audience}
-                            <br>Number of stages: {len(syllabus_json['syllabus'])}
-                            <br><br>You can now click 'Start Teaching Session' to begin teaching.
-                            </div>
-                            """
+                            success_message = SUCCESS_SYLLABUS_TEMPLATE.format(
+                                syllabus_name,
+                                audience,
+                                len(syllabus_json['syllabus'])
+                            )
                             
                             # Update button state without directly manipulating the component
                             # We'll return interactive=True and let Gradio update it
@@ -220,21 +217,13 @@ def create_app():
                     except json.JSONDecodeError as e:
                         logger.error(f"Failed to parse syllabus JSON from chat history: {str(e)}")
             
-            error_message = """
-            <div class="error-status">
-            <strong>⚠️ No valid syllabus found.</strong> Please generate a syllabus first by:
-            <br>1. Upload a document using the file uploader
-            <br>2. Type "Generate a syllabus from this document" in the chat
-            </div>
-            """
-            
-            # Keep dropdown as is, don't update all_syllabi
+            # No valid syllabus found
             return (
                 False,                          # syllabus_ready
                 None,                           # syllabus_data
-                error_message,                  # status_message
+                ERROR_NO_SYLLABUS,              # status_message
                 None,                           # all_syllabi_updated (no change)
-                gr.update(visible=False)  # hide dropdown if no valid syllabus
+                gr.update(visible=False)        # hide dropdown if no valid syllabus
             )
         
         # Function to handle syllabus selection from dropdown
@@ -254,11 +243,7 @@ def create_app():
             all_syllabi_val = all_syllabi.value if hasattr(all_syllabi, "value") else all_syllabi
             
             if not selection or not all_syllabi_val:
-                return False, None, """
-                <div class="error-status">
-                <strong>⚠️ No syllabus selected.</strong> Please select a syllabus from the dropdown.
-                </div>
-                """
+                return False, None, ERROR_NO_SELECTION
             
             # Find the selected syllabus in all_syllabi
             selected_syllabus = None
@@ -268,24 +253,17 @@ def create_app():
                     break
             
             if not selected_syllabus:
-                return False, None, """
-                <div class="error-status">
-                <strong>⚠️ Selected syllabus not found.</strong> Please try generating a new syllabus.
-                </div>
-                """
+                return False, None, ERROR_SELECTION_NOT_FOUND
             
             # Success - update the state with the selected syllabus
             syllabus_name = selected_syllabus.get("syllabus_name", "Unknown")
             audience = selected_syllabus.get("target_audience", "")
             
-            success_message = f"""
-            <div class="success-status">
-            <strong>✅ Success!</strong> Syllabus "{syllabus_name}" selected.
-            <br>Target audience: {audience}
-            <br>Number of stages: {len(selected_syllabus.get("syllabus", []))}
-            <br><br>You can now click 'Start Teaching Session' to begin teaching.
-            </div>
-            """
+            success_message = SUCCESS_SYLLABUS_TEMPLATE.format(
+                syllabus_name,
+                audience,
+                len(selected_syllabus.get("syllabus", []))
+            )
             
             return True, selected_syllabus, success_message
         
@@ -371,14 +349,11 @@ def create_app():
                         audience = syllabus_data_val.get("target_audience", "")
                         num_stages = len(syllabus_data_val.get("syllabus", []))
                         
-                        teaching_success_msg = f"""
-                        <div class="success-status">
-                        <strong>✅ Ready to teach!</strong> Syllabus "{syllabus_name}" loaded successfully.
-                        <br>Target audience: {audience}
-                        <br>Number of stages: {num_stages}
-                        <br><br>Click "Start Teaching" below to begin the teaching session.
-                        </div>
-                        """
+                        teaching_success_msg = TEACHING_SUCCESS_TEMPLATE.format(
+                            syllabus_name,
+                            audience,
+                            num_stages
+                        )
                         
                         # Show teaching interface
                         return (

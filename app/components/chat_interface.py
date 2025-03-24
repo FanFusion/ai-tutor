@@ -1,5 +1,6 @@
 import gradio as gr
 from app.utils.gr_logger import setup_logger
+from app.utils.const import *
 
 logger = setup_logger(__name__)
 
@@ -20,41 +21,18 @@ def create_chat_interface(syllabus_generator):
     
     # Create message input
     msg = gr.Textbox(
-        placeholder="Chat with the AI about your teaching syllabus...",
+        placeholder=CHAT_PLACEHOLDER,
         container=False
     )
     
     # Create clear button
-    clear = gr.Button("Clear")
+    clear = gr.Button(CLEAR_BTN_TEXT)
     
     # Add descriptive message
-    info_text = gr.Markdown("""
-    ## Teaching Syllabus Generator
-    
-    This chatbot can generate and modify teaching syllabuses based on uploaded documents.
-    
-    **Usage Instructions:**
-    1. Upload a document (PDF/TXT) using the file upload component
-    2. Ask the chatbot to generate a syllabus from the document
-    3. Modify the syllabus by providing specific instructions
-    
-    The syllabus follows a structured JSON format with stages, each containing:
-    - Stage ID and description
-    - Allowed media types for evaluation
-    - Learning targets and knowledge points
-    - Evaluation questions and answers
-    """)
+    info_text = gr.Markdown(CHAT_INTERFACE_DESCRIPTION)
     
     # Add example prompts for users
-    examples = [
-        "Generate a teaching syllabus from my uploaded document",
-        "Change the target audience to 'middle school students (12-14 years)'",
-        "Add a new stage about advanced topics at the end of the syllabus",
-        "Update the teaching knowledge in stage 1 to include 'introduction to basic concepts'",
-        "Add more media types like 'video' to stage 2",
-        "Make the judge question in stage 3 more challenging",
-        "Add an image illustrating the concept in the first stage"
-    ]
+    examples = CHAT_EXAMPLE_PROMPTS
     logger.debug(f"Configured {len(examples)} example prompts")
     
     # Define chat submit function
@@ -63,7 +41,7 @@ def create_chat_interface(syllabus_generator):
         
         if not syllabus_generator.document_uploaded:
             logger.warning("Document not uploaded, prompting user")
-            chat_history.append((message, "Please upload a document first to generate a syllabus."))
+            chat_history.append((message, NO_DOCUMENT_ERROR))
             return "", chat_history
         
         # Get response from syllabus generator

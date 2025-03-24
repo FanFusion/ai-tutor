@@ -1,5 +1,6 @@
 import gradio as gr
 from app.utils.gr_logger import setup_logger
+from app.utils.const import *
 
 logger = setup_logger(__name__)
 
@@ -13,7 +14,7 @@ def create_file_upload():
     
     # Create file upload component
     file_upload = gr.File(
-        label="Upload Document",
+        label=FILE_UPLOAD_LABEL,
         file_types=[".pdf", ".txt"],
         file_count="single",
         type="filepath",
@@ -23,13 +24,7 @@ def create_file_upload():
     logger.debug("File upload component configured with types: [.pdf, .txt]")
     
     # Add guidance about supported file types
-    gr.Markdown("""
-    ### Supported Document Formats
-    
-    - PDF documents (recommended for best results)
-    - Text files (.txt)
-    
-    """)
+    gr.Markdown(FILE_UPLOAD_DESCRIPTION)
     
     logger.info("File upload component created successfully")
     return file_upload 

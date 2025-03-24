@@ -1,6 +1,7 @@
 import gradio as gr
 import re
 from app.utils.gr_logger import setup_logger
+from app.utils.const import *
 
 logger = setup_logger(__name__)
 
@@ -25,36 +26,30 @@ def create_teaching_interface(tutor_bot_service):
     
     # Create message input
     msg = gr.Textbox(
-        placeholder="Ask a question or provide an answer...",
+        placeholder=TEACHING_CHAT_PLACEHOLDER,
         container=False,
         scale=7
     )
     
     # Create stage indicators
-    current_stage = gr.Markdown("### Current Stage: Not started")
-    stage_progress = gr.Markdown("### Progress: 0/0 stages")
+    current_stage = gr.Markdown(TEACHING_STAGE_NOT_STARTED)
+    stage_progress = gr.Markdown(TEACHING_PROGRESS_NOT_STARTED)
     
     # Create admin control buttons
     with gr.Row():
-        start_btn = gr.Button("Start Teaching", variant="primary")
-        next_stage_btn = gr.Button("Next Stage")
-        prev_stage_btn = gr.Button("Previous Stage")
-        end_btn = gr.Button("End Teaching", variant="stop")
+        start_btn = gr.Button(START_TEACHING_TEXT, variant="primary")
+        next_stage_btn = gr.Button(NEXT_STAGE_TEXT)
+        prev_stage_btn = gr.Button(PREV_STAGE_TEXT)
+        end_btn = gr.Button(END_TEACHING_TEXT, variant="stop")
     
     # Create multimedia input buttons
     with gr.Row():
-        gr.Markdown("### Add Multimedia Input:")
-        image_btn = gr.Button("📷 Add Image Description")
-        video_btn = gr.Button("🎬 Add Video Description")
+        gr.Markdown(MULTIMEDIA_HEADING)
+        image_btn = gr.Button(IMAGE_BTN_TEXT)
+        video_btn = gr.Button(VIDEO_BTN_TEXT)
     
     # Add example questions
-    example_questions = [
-        "Can you explain this concept in more detail?",
-        "I didn't understand the last part.",
-        "Why is this important?",
-        "How does this relate to the previous stage?",
-        "What are some real-world applications of this?"
-    ]
+    example_questions = TEACHING_EXAMPLE_QUESTIONS
     
     # Define chat submit function for user messages
     def user_message_submit(message, chat_history):
@@ -65,7 +60,7 @@ def create_teaching_interface(tutor_bot_service):
         
         if not tutor_bot_service.syllabus_info:
             logger.warning("No syllabus available for teaching")
-            chat_history.append((message, "Sorry, there's no syllabus available for teaching. Please go back to the 'Generate Syllabus' tab and generate a syllabus first."))
+            chat_history.append((message, NO_SYLLABUS_TEACHING_ERROR))
             return "", chat_history
             
         updated_chat_history, stage_updated = tutor_bot_service.process_message("user", message, chat_history)
@@ -82,7 +77,7 @@ def create_teaching_interface(tutor_bot_service):
         
         if not tutor_bot_service.syllabus_info:
             logger.warning("No syllabus available for teaching")
-            chat_history.append(("", "Sorry, there's no syllabus available for teaching. Please go back to the 'Generate Syllabus' tab and generate a syllabus first."))
+            chat_history.append(("", NO_SYLLABUS_TEACHING_ERROR))
             return chat_history
             
         updated_chat_history = tutor_bot_service.start_teaching(chat_history)
@@ -103,7 +98,7 @@ def create_teaching_interface(tutor_bot_service):
         
         if not tutor_bot_service.syllabus_info:
             logger.warning("No syllabus available for teaching")
-            chat_history.append(("", "Sorry, there's no syllabus available for teaching. Please go back to the 'Generate Syllabus' tab and generate a syllabus first."))
+            chat_history.append(("", NO_SYLLABUS_TEACHING_ERROR))
             return chat_history
             
         updated_chat_history, _ = tutor_bot_service.process_message("admin", "next stage", chat_history)
@@ -115,7 +110,7 @@ def create_teaching_interface(tutor_bot_service):
         
         if not tutor_bot_service.syllabus_info:
             logger.warning("No syllabus available for teaching")
-            chat_history.append(("", "Sorry, there's no syllabus available for teaching. Please go back to the 'Generate Syllabus' tab and generate a syllabus first."))
+            chat_history.append(("", NO_SYLLABUS_TEACHING_ERROR))
             return chat_history
             
         updated_chat_history, _ = tutor_bot_service.process_message("admin", "previous stage", chat_history)
@@ -138,9 +133,9 @@ def create_teaching_interface(tutor_bot_service):
                 return current_stage_md, progress_md
             except (IndexError, KeyError) as e:
                 logger.error(f"Error updating stage indicators: {str(e)}")
-                return "### Current Stage: Error loading stage info", "### Progress: Error loading progress"
+                return TEACHING_STAGE_ERROR, TEACHING_PROGRESS_ERROR
         else:
-            return "### Current Stage: Not started", "### Progress: 0/0 stages"
+            return TEACHING_STAGE_NOT_STARTED, TEACHING_PROGRESS_NOT_STARTED
     
     # Helper functions for multimedia input
     def add_image_tag(message):
