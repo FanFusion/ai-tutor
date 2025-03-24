@@ -44,8 +44,8 @@ A MVP Gradio application that uses Gemini AI to generate teaching syllabuses fro
 - `S3_BUCKET_NAME`: S3 bucket name for document uploads
 - `S3_ACCESS_HOST`: S3 access host for public URLs
 - `AWS_S3_ENDPOINT`: S3 endpoint URL
-- `GEMINI_CHAT_MODEL`: Gemini model for interactive teaching 
-
+- `GEMINI_CHAT_MODEL`: Gemini model for interactive teaching. 
+You should be ready to setup gemini  refering to offical docs.
 ## Usage
 
 ### Syllabus Generation
