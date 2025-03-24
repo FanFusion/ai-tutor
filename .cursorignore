@@ -1,1 +1,6 @@
 prompt_backup
+logs
+.env
+.venv
+.gitignore
+.git

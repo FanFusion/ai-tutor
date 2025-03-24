@@ -23,21 +23,8 @@ def create_teaching_interface(tutor_bot_service):
         show_label=False,
         avatar_images=("./app/assets/user.png", "./app/assets/bot.png")
     )
-        # Create multimedia input buttons
-    with gr.Row():
-        gr.Markdown(MULTIMEDIA_HEADING)
-        image_btn = gr.Button(IMAGE_BTN_TEXT)
-        video_btn = gr.Button(VIDEO_BTN_TEXT)
     
-
-    # Create interaction input
-    interaction = gr.Textbox(
-        label="Interaction Content",
-        placeholder="Type interaction content here...",
-        container=True
-    )
-    
-    # Create message input and send button in a row
+        # Create message input and send button in a row
     with gr.Row():
         msg = gr.Textbox(
             placeholder=TEACHING_CHAT_PLACEHOLDER,
@@ -45,7 +32,7 @@ def create_teaching_interface(tutor_bot_service):
             scale=7
         )
         send_btn = gr.Button(SEND_BTN_TEXT, variant="primary", scale=1)
-    
+
     # Create stage indicators
     current_stage = gr.Markdown(TEACHING_STAGE_NOT_STARTED)
     stage_progress = gr.Markdown(TEACHING_PROGRESS_NOT_STARTED)
@@ -56,6 +43,11 @@ def create_teaching_interface(tutor_bot_service):
         next_stage_btn = gr.Button(NEXT_STAGE_TEXT)
         prev_stage_btn = gr.Button(PREV_STAGE_TEXT)
         end_btn = gr.Button(END_TEACHING_TEXT, variant="stop")
+    
+    # Create multimedia input buttons
+    with gr.Row():
+        gr.Markdown("### Add Interaction:")
+        interaction_btn = gr.Button("💬 Add Interaction")
     
     # Add example questions
     example_questions = TEACHING_EXAMPLE_QUESTIONS
@@ -75,8 +67,7 @@ def create_teaching_interface(tutor_bot_service):
         updated_chat_history, stage_updated = tutor_bot_service.process_message("user", message, chat_history)
         
         # Update stage indicator if needed
-        if stage_updated:
-            update_stage_indicators()
+        update_stage_indicators()
         
         return "", updated_chat_history
     
@@ -130,6 +121,7 @@ def create_teaching_interface(tutor_bot_service):
         """Update the stage indicators"""
         if tutor_bot_service.syllabus_info and tutor_bot_service.is_teaching_started:
             try:
+                print(f"update_stage_indicators:",tutor_bot_service.current_stage_index )
                 current_stage_info = tutor_bot_service.syllabus_info["syllabus"][tutor_bot_service.current_stage_index]
                 stage_id = current_stage_info.get("stage_id", "Unknown")
                 stage_description = current_stage_info.get("stage_description", "")
@@ -138,7 +130,6 @@ def create_teaching_interface(tutor_bot_service):
                 
                 current_stage_md = f"### Current Stage: {stage_id} - {stage_description}"
                 progress_md = f"### Progress: {current_stage_num}/{total_stages} stages"
-                
                 return current_stage_md, progress_md
             except (IndexError, KeyError) as e:
                 logger.error(f"Error updating stage indicators: {str(e)}")
@@ -146,31 +137,30 @@ def create_teaching_interface(tutor_bot_service):
         else:
             return TEACHING_STAGE_NOT_STARTED, TEACHING_PROGRESS_NOT_STARTED
     
-    # Helper function to add interaction content to message
-    def add_interaction_content(interaction_text, message):
-        logger.debug("Adding interaction content to message")
-        interaction_formatted = f" [interaction]{interaction_text}[/interaction]"
-        return message + interaction_formatted if message else interaction_formatted
+    # Helper functions for multimedia input
+    def add_interaction_tag(message):
+        logger.debug("Adding interaction tag to message")
+        return message + " [interaction][/interaction]"
     
     # Connect components
     msg.submit(user_message_submit, [msg, chatbot], [msg, chatbot])
     
     # Connect send button to submit function
     send_btn.click(user_message_submit, [msg, chatbot], [msg, chatbot])
-    
-    # Connect interaction input to message
-    interaction.change(add_interaction_content, [interaction, msg], [msg])
-    
+ 
     # Connect admin buttons
     start_btn.click(start_teaching, [chatbot], [chatbot])
     next_stage_btn.click(next_stage, [chatbot], [chatbot])
     prev_stage_btn.click(prev_stage, [chatbot], [chatbot])
     end_btn.click(end_teaching, [chatbot], [chatbot])
     
-    # Connect stage indicators update
-    for btn in [start_btn, next_stage_btn, prev_stage_btn]:
-        btn.click(update_stage_indicators, None, [current_stage, stage_progress])
+    # Connect multimedia buttons to message input
+    interaction_btn.click(add_interaction_tag, [msg], [msg])
     
+    # Connect stage indicators update
+    # for btn in [start_btn, next_stage_btn, prev_stage_btn,send_btn]:
+    #     btn.click(update_stage_indicators, None, [current_stage, stage_progress])
+    chatbot.change(update_stage_indicators, None, [current_stage, stage_progress])
     # Add examples
     gr.Examples(
         examples=example_questions,

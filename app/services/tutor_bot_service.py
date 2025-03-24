@@ -52,7 +52,11 @@ class TutorBotService:
         
         # No longer initializing chat session or sending system prompt here
         self.logger.info(f"Syllabus set, syllabus_info:{self.syllabus_info}")
-    
+    def filter_response_content(self,response_content):
+            response_content=response_content.replace("[interaction]","\n[interaction]").replace("[/interaction]","[/interaction]\n")
+            response_content=response_content.replace("[image]","\n[image]").replace("[/image]","[/image]\n")
+            response_content=response_content.replace("[video]","\n[video]").replace("[/video]","[/video]\n")
+            return response_content 
     def process_message(self, input_type, input_content, chat_history):
         """Process a message from the user or admin and generate a response
         
@@ -93,36 +97,42 @@ class TutorBotService:
         response_content = response_json.get("response_content", "")
         response_type = response_json.get("response_type", "")
         is_pass = response_json.get("is_pass", False)
-        
+
         # Add to chat history
         if input_type == "user":
-            chat_history.append((input_content, response_content))
-        elif input_type == "admin" and input_content.lower() not in ["start teaching", "end teaching"]:
+            chat_history.append((input_content, self.filter_response_content(response_content)))
+        elif input_type == "admin" and input_content.lower() not in ["start teaching", "end teaching","greet"]:
             # Don't show admin commands in chat history except for special commands
             pass
         else:
-            chat_history.append(("", response_content))
+            chat_history.append(("", self.filter_response_content(response_content)))
             
         # Handle stage progression if needed
         stage_updated = False
         if (input_type == "admin" and "next stage" in input_content.lower()) or \
-           (response_type == "judge" and is_pass and self.current_stage_index < len(self.syllabus_info["syllabus"]) - 1):
+           (response_type == "judge" and is_pass):
             # Move to next stage
-            self.current_stage_index += 1
-            stage_updated = True
-            self.logger.info(f"Moving to next stage: {self.current_stage_index}")
-            
-            # If advancing stage, send a teaching message for the new stage
-            if stage_updated and self.current_stage_index < len(self.syllabus_info["syllabus"]):
-                teach_prompt = self._create_prompt("admin", "start stage", self._get_current_stage_info())
-                teach_response_text = self._send_message_to_model(teach_prompt)
+            if  self.current_stage_index < len(self.syllabus_info["syllabus"]) - 1:
+                self.current_stage_index += 1
+                stage_updated = True
+                self.logger.info(f"Moving to next stage: {self.current_stage_index}")
                 
-                try:
-                    teach_response_json = json.loads(teach_response_text)
-                    teach_content = teach_response_json.get("response_content", "")
-                    chat_history.append(("", teach_content))
-                except json.JSONDecodeError:
-                    self.logger.error(f"Failed to parse teaching response as JSON: {teach_response_text}")
+                # If advancing stage, send a teaching message for the new stage
+                if stage_updated and self.current_stage_index < len(self.syllabus_info["syllabus"]):
+                    teach_prompt = self._create_prompt("admin", "start stage", self._get_current_stage_info())
+                    teach_response_text = self._send_message_to_model(teach_prompt)
+                    
+                    try:
+                        teach_response_json = json.loads(teach_response_text)
+                        teach_content = teach_response_json.get("response_content", "")
+                        chat_history.append(("", teach_content))
+                    except json.JSONDecodeError:
+                        self.logger.error(f"Failed to parse teaching response as JSON: {teach_response_text}")
+            else:
+                # trigger the end teaching
+                self.logger.info("All stages completed, triggering end teaching")
+                chat_history = self.end_teaching(chat_history)
+                stage_updated = True
             
         elif input_type == "admin" and "previous stage" in input_content.lower() and self.current_stage_index > 0:
             # Move to previous stage
@@ -167,10 +177,10 @@ class TutorBotService:
         self.chat_session = self.model.start_chat()
         system_prompt = self._create_system_prompt()
         system_response=self._send_message_to_model(system_prompt, is_system=True)
-        self.logger.info(f"Syllabus set and chat session initialized, syllabus_info:{self.syllabus_info} response:{system_response}")
+        self.logger.info(f"Syllabus set and chat session initialized,  response:{system_response}")
         # Create a greeting prompt
         current_stage_info = self._get_current_stage_info()
-        greeting_prompt = self._create_prompt("admin", "start teaching", current_stage_info)
+        greeting_prompt = self._create_prompt("admin", "greet",None )
         
         # Get greeting response
         greeting_response_text = self._send_message_to_model(greeting_prompt)
@@ -178,7 +188,7 @@ class TutorBotService:
         try:
             greeting_response_json = json.loads(greeting_response_text)
             greeting_content = greeting_response_json.get("response_content", "")
-            chat_history.append(("", greeting_content))
+            chat_history.append(("", self.filter_response_content(greeting_content)))
         except json.JSONDecodeError:
             self.logger.error(f"Failed to parse greeting response as JSON: {greeting_response_text}")
             chat_history.append(("", "Welcome to the teaching session! Let's get started."))
@@ -276,6 +286,7 @@ class TutorBotService:
             "stage_id": "current stage id",
             "response_type": "teach/explain/judge/greet",
             "is_pass": true/false,
+            "has_question": true/false,
             "response_content": "Your actual response content here"
         }}
         
@@ -285,17 +296,19 @@ class TutorBotService:
         
         Important rules:
         1. response_type has four possible values:
-           - "teach": Used only when starting a new stage, explaining the core teaching content
+           - "teach": Used only when starting a new stage, you MUST explaining the core teaching content,and than provide a question for the user to answer according to the teaching content
            - "explain": Used when answering questions or providing additional explanations
            - "judge": Used when evaluating student answers to questions
            - "greet": Used only at the beginning and end of the teaching session
-        
+        has_question:
+           - true: The response_content contains a question,ONLY true when response_type is "teach"
+           - false: The response_content does not contain a question
         2. is_pass should only be true when response_type is "judge" and the student's answer meets the criteria in judge_rule
         
         3. For multimedia content in response_content, use these tags:
            - [image]detailed description of what the image should show[/image]
            - [video]detailed description of what the video should contain[/video]
-           - <interactive>detailed description of what the interactive element should contain</interactive>
+           - [interaction]detailed description of what the interactive element should contain[/interaction]
         
         4. You will receive input in this format:
            Input_type: admin/user
@@ -304,7 +317,8 @@ class TutorBotService:
            In some case,user will provide interaction content, The interaction content will be warped in [interaction] tags,with the description of what the interaction should contain,
            you should consider the content in tags as the interaction content, to judge the student's answer is correct or not
         5. Admin commands have special meanings:
-           - "start teaching": Begin the teaching session with a greeting,the greeting content should relate to the total syllabus.
+           - "greet": Begin the teaching session with a greeting,the greeting content should relate to the total syllabus.
+           - "start teaching": Begin the teaching session 
            - "end teaching": End the teaching session with a conclusion
            - "start stage": Begin teaching the current stage
            - "next stage": Move to the next stage
@@ -322,8 +336,6 @@ class TutorBotService:
         
         11. When judging answers, strictly follow the judge_rule defined in the syllabus for that stage
         
-        12. ALWAYS return a valid JSON object with the exact structure as shown above.
-        
         13. You MUST highlight the question part in the response_content using **content**
         for example:
         response_content:
@@ -332,6 +344,7 @@ class TutorBotService:
         
         14. You MUST limit the conversation between the user and you  within the scope of
 the syllabus
+        Now wait for the user's input:
         """
         
         return system_prompt
